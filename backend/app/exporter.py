@@ -1,0 +1,184 @@
+"""Laser SVG export — a port of pcb_fab_laser/exporter.py (KiCad plugin) to Gerber input.
+
+Files per side, `<board>_<side>_<kind>.svg`:
+
+| kind   | content                                         | laser meaning                                   |
+|--------|-------------------------------------------------|-------------------------------------------------|
+| copper | board outline − copper  (negative)              | burn paint off everything that is not copper    |
+| silk   | silkscreen ∩ outline    (positive)              | silkscreen artwork, its own job                 |
+| mask   | solder-mask openings ∩ outline (positive)       | strip paint off pads after etch (plugin "pads") |
+| cut    | outline, fill none, red 0.1 mm stroke, no bg    | cut the board out                               |
+| drill  | one circle per hole, filled capsule per slot    | drill targets                                   |
+
+All files share the board-outline bbox, so they overlay 1:1. Mirror flips X per side.
+"""
+import io
+import os
+import shutil
+import subprocess
+import tempfile
+import zipfile
+from dataclasses import dataclass, field
+from xml.sax.saxutils import escape
+
+from shapely.geometry import LineString
+
+from .board import SIDE_ROLES, Board
+from .config import settings
+from .geometry import clean
+
+KINDS = ("copper", "silk", "mask", "cut", "drill")
+
+
+@dataclass
+class ExportOptions:
+    sides: tuple = ("front", "back")
+    kinds: dict = field(default_factory=lambda: {k: True for k in KINDS})
+    mirror_front: bool = False
+    mirror_back: bool = True
+    invert_copper: bool = False
+    png: bool = False
+    dpi: int = 1000
+
+    @classmethod
+    def from_dict(cls, d):
+        d = d or {}
+        sides = tuple(s for s in ("front", "back") if s in (d.get("sides") or ("front", "back")))
+        kinds = {k: bool((d.get("kinds") or {}).get(k, True)) for k in KINDS}
+        dpi = int(d.get("dpi") or settings.default_dpi)
+        if not 1 <= dpi <= settings.max_dpi:
+            raise ValueError(f"DPI must be between 1 and {settings.max_dpi}.")
+        return cls(
+            sides=sides,
+            kinds=kinds,
+            mirror_front=bool(d.get("mirror_front", settings.default_mirror_front)),
+            mirror_back=bool(d.get("mirror_back", settings.default_mirror_back)),
+            invert_copper=bool(d.get("invert_copper", False)),
+            png=bool(d.get("png", False)),
+            dpi=dpi,
+        )
+
+
+def export_svgs(board: Board, opts: ExportOptions):
+    """Return [(filename, svg_text)] for every requested file that has content."""
+    out = []
+    for side in opts.sides:
+        out.extend(_export_side(board, side, opts))
+    return out
+
+
+def _export_side(board, side, opts):
+    roles = SIDE_ROLES[side]
+    mirror = opts.mirror_front if side == "front" else opts.mirror_back
+    fr = board.frame
+    outline = board.outline
+
+    def name(kind):
+        return f"{board.name}_{side}_{kind}.svg"
+
+    files = []
+
+    if opts.kinds.get("copper") and board.has_role(roles["copper"]):
+        copper = board.role_geom(roles["copper"])
+        art = clean(copper.intersection(outline)) if opts.invert_copper else clean(outline.difference(copper))
+        files.append((name("copper"), _svg(fr, [_path(fr, art, mirror)])))
+
+    if opts.kinds.get("silk") and board.has_role(roles["silk"]):
+        silk = clean(board.role_geom(roles["silk"]).intersection(outline))
+        if not silk.is_empty:
+            files.append((name("silk"), _svg(fr, [_path(fr, silk, mirror)])))
+
+    if opts.kinds.get("mask") and board.has_role(roles["mask"]):
+        mask = clean(board.role_geom(roles["mask"]).intersection(outline))
+        if not mask.is_empty:
+            files.append((name("mask"), _svg(fr, [_path(fr, mask, mirror)])))
+
+    if opts.kinds.get("cut"):
+        # Laser software imports the background rect as a shape and would cut it;
+        # the outline alone already spans the bbox.
+        files.append((name("cut"), _svg(
+            fr, [_path(fr, outline, mirror, fill="none", stroke="red", stroke_width=0.1)], background=False)))
+
+    if opts.kinds.get("drill") and (board.drills.holes or board.drills.slots):
+        files.append((name("drill"), _svg(fr, _drill_elems(fr, board.drills, mirror))))
+
+    return files
+
+
+def _path(fr, geom, mirror, fill="black", stroke="none", stroke_width=0.0):
+    d = fr.path_d(geom, mirror)
+    if not d:
+        return ""
+    attrs = [f'd="{d}"', f'fill="{escape(fill)}"', 'fill-rule="evenodd"', f'stroke="{escape(stroke)}"']
+    if stroke_width > 0:
+        attrs.append(f'stroke-width="{stroke_width}"')
+    return f'  <path {" ".join(attrs)}/>'
+
+
+def _drill_elems(fr, drills, mirror):
+    body = []
+    for x, y, d in drills.holes:
+        cx, cy = fr.pt(x, y, mirror)
+        body.append(f'  <circle cx="{cx:.4f}" cy="{cy:.4f}" r="{d / 2:.4f}" fill="black" stroke="none"/>')
+    for x1, y1, x2, y2, w in drills.slots:
+        capsule = LineString([(x1, y1), (x2, y2)]).buffer(w / 2, quad_segs=16)
+        body.append(_path(fr, capsule, mirror))
+    return body
+
+
+def _svg(fr, body, background=True):
+    w, h = fr.w, fr.h
+    return (
+        '<?xml version="1.0" encoding="UTF-8"?>\n'
+        f'<svg xmlns="http://www.w3.org/2000/svg" version="1.1" '
+        f'width="{w:.4f}mm" height="{h:.4f}mm" viewBox="0 0 {w:.4f} {h:.4f}">\n'
+        + (f'  <rect x="0" y="0" width="{w:.4f}" height="{h:.4f}" fill="white"/>\n' if background else "")
+        + "\n".join(b for b in body if b) + "\n"
+        "</svg>\n"
+    )
+
+
+# ---------- PNG ----------
+
+def rasterizer():
+    for name in ("rsvg-convert", "inkscape", "magick", "convert"):
+        path = shutil.which(name)
+        if path:
+            return name, path
+    return None, None
+
+
+def rasterize(svg_text, dpi):
+    tool, path = rasterizer()
+    if tool is None:
+        raise RuntimeError("PNG requested but no rasterizer found (install rsvg-convert, inkscape or imagemagick).")
+    with tempfile.TemporaryDirectory() as td:
+        src = os.path.join(td, "in.svg")
+        dst = os.path.join(td, "out.png")
+        with open(src, "w", encoding="utf-8") as f:
+            f.write(svg_text)
+        if tool == "rsvg-convert":
+            cmd = [path, "-d", str(dpi), "-p", str(dpi), "-b", "white", "-o", dst, src]
+        elif tool == "inkscape":
+            cmd = [path, src, "--export-type=png", f"--export-dpi={dpi}", f"--export-filename={dst}",
+                   "--export-background=white", "--export-background-opacity=1.0"]
+        else:
+            cmd = [path, "-density", str(dpi), "-background", "white", "-flatten", src, dst]
+        proc = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
+        if proc.returncode != 0:
+            raise RuntimeError(f"{tool} failed (exit {proc.returncode}): {proc.stderr.strip()}")
+        with open(dst, "rb") as f:
+            return f.read()
+
+
+def export_zip(board: Board, opts: ExportOptions):
+    files = export_svgs(board, opts)
+    if not files:
+        raise ValueError("Nothing to export with these options.")
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
+        for fname, svg in files:
+            zf.writestr(fname, svg)
+            if opts.png:
+                zf.writestr(fname[:-4] + ".png", rasterize(svg, opts.dpi))
+    return buf.getvalue()
