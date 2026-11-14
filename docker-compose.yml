@@ -1,0 +1,13 @@
+services:
+  gerber-to-laser:
+    build: .
+    image: gerber-to-laser:latest
+    container_name: gerber-to-laser
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      PORT: ${PORT:-8000}
+    ports:
+      - "${PORT:-8000}:${PORT:-8000}"
+    restart: unless-stopped
