@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Gerber to Laser</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='3' y='5' width='26' height='22' rx='2' fill='%23fbf8ef' stroke='%232b4c9b' stroke-width='2'/%3E%3Cpath d='M8 12h10v4h6' fill='none' stroke='%232b4c9b' stroke-width='2.4' stroke-linecap='round'/%3E%3Ccircle cx='24' cy='16' r='2.4' fill='%23e0675f'/%3E%3C/svg%3E" />
+  </head>
+  <body>
+    <div class="app">
+      <aside class="sidebar" aria-label="Layers and export">
+        <header class="brand">
+          <div class="brand-mark" aria-hidden="true"></div>
+          <div>
+            <h1>Gerber <span class="arrow">→</span> Laser</h1>
+            <p class="sub">Laser-ready SVGs from your Gerbers</p>
+          </div>
+        </header>
+
+        <section class="card upload" id="upload">
+          <label class="drop" id="drop">
+            <input type="file" id="file-input" multiple accept=".zip,.gbr,.ger,.gtl,.gbl,.gto,.gbo,.gts,.gbs,.gtp,.gbp,.gko,.gm1,.gml,.drl,.xln,.txt,.cmp,.sol,.plc,.pls,.stc,.sts,.dim,*" />
+            <span class="drop-title">Drop Gerbers here</span>
+            <span class="drop-hint">a .zip or the loose files, drill file included · <span id="max-mb">50</span> MB max</span>
+            <span class="btn btn-small">Choose files…</span>
+          </label>
+          <div class="board-meta" id="board-meta" hidden></div>
+        </section>
+
+        <div id="notes"></div>
+
+        <section class="card" id="layers-card" hidden>
+          <div class="card-head">
+            <h2><span class="hl">Layers</span></h2>
+            <div class="head-actions">
+              <button class="link" id="show-all" type="button">show all</button>
+              <span class="dot-sep">·</span>
+              <button class="link" id="hide-all" type="button">hide all</button>
+            </div>
+          </div>
+          <div id="layer-list"></div>
+        </section>
+
+        <section class="card" id="export-card" hidden>
+          <div class="card-head">
+            <h2><span class="hl">Export for laser</span></h2>
+          </div>
+          <div id="export-panel"></div>
+        </section>
+
+        <footer class="foot">Settings follow the <em>PCB Fab Laser</em> KiCad plugin.</footer>
+      </aside>
+
+      <main class="stage">
+        <section class="pane pane-2d">
+          <header class="pane-head">
+            <span class="tape">2D view</span>
+            <div class="seg" role="group" aria-label="View side">
+              <button type="button" class="seg-btn active" data-side="top">Top</button>
+              <button type="button" class="seg-btn" data-side="bottom">Bottom</button>
+            </div>
+            <button type="button" class="btn btn-small" id="fit-2d">Fit</button>
+          </header>
+          <div class="pane-body graph" id="view2d">
+            <div class="empty">
+              <p class="empty-title">Nothing on this page yet</p>
+              <p>Upload a Gerber set to see the board.</p>
+            </div>
+          </div>
+          <div class="readout" id="readout"></div>
+        </section>
+
+        <section class="pane pane-3d">
+          <header class="pane-head">
+            <span class="tape tape-pink">3D view</span>
+            <div class="seg" role="group" aria-label="Camera">
+              <button type="button" class="seg-btn" data-cam="top">Top</button>
+              <button type="button" class="seg-btn" data-cam="bottom">Bottom</button>
+              <button type="button" class="seg-btn" data-cam="iso">Angle</button>
+            </div>
+          </header>
+          <div class="pane-body" id="view3d">
+            <div class="empty">
+              <p class="empty-title">No board yet</p>
+              <p>Drag to orbit, scroll to zoom once a board is loaded.</p>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <div class="sheet" id="sheet" hidden>
+      <div class="sheet-backdrop" data-close></div>
+      <div class="sheet-panel card" role="dialog" aria-modal="true" aria-labelledby="sheet-title">
+        <div class="card-head">
+          <h2 id="sheet-title"><span class="hl">Export preview</span></h2>
+          <div class="head-actions">
+            <button class="btn btn-primary btn-small" id="sheet-zip" type="button">Download ZIP</button>
+            <button class="btn btn-small" data-close type="button">Close</button>
+          </div>
+        </div>
+        <p class="sheet-note">Black = where the laser fires. Every file shares the board's bounding box, so the files line up 1:1.</p>
+        <div class="thumbs" id="thumbs"></div>
+      </div>
+    </div>
+
+    <div class="toast" id="toast" role="status" hidden></div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
