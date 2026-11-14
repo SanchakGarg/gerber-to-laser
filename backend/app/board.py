@@ -158,7 +158,7 @@ class Board:
                 "filename": l.filename,
                 "format": l.fmt,
                 "role": l.role,
-                "label": ROLE_LABELS.get(l.role, l.role),
+                "label": self._label(l),
             }
             if l.fmt == "excellon":
                 entry["holes"] = [[*map(lambda v: round(v, 4), fr.pt(x, y)), round(d, 4)]
@@ -203,6 +203,14 @@ class Board:
             "ignored": self.ignored,
             "warnings": self.warnings + ([self.outline_warning] if self.outline_warning else []),
         }
+
+    def _label(self, l):
+        if l.role != "other":
+            return ROLE_LABELS.get(l.role, l.role)
+        stem = l.filename.rsplit(".", 1)[0]
+        if self.name and stem.startswith(self.name):
+            stem = stem[len(self.name):]
+        return stem.strip("-_. ") or ROLE_LABELS["other"]
 
     def cleanup(self):
         shutil.rmtree(self.workdir, ignore_errors=True)
