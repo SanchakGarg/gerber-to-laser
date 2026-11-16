@@ -10,6 +10,9 @@ Files per side, `<board>_<side>_<kind>.svg`:
 | cut    | outline, fill none, red 0.1 mm stroke, no bg    | cut the board out                               |
 | drill  | one circle per hole, filled capsule per slot    | drill targets                                   |
 
+Drill holes and slots are shrunk by `hole_tolerance` (diameter/width, mm) so the laser kerf
+doesn't overcut them; a negative tolerance enlarges them.
+
 All files share the board-outline bbox, so they overlay 1:1. Mirror flips X per side.
 """
 import io
@@ -28,6 +31,8 @@ from .config import settings
 from .geometry import clean
 
 KINDS = ("copper", "silk", "mask", "cut", "drill")
+MAX_HOLE_TOLERANCE_MM = 2.0
+MIN_HOLE_MM = 0.1   # tolerance never shrinks a hole below this (or below its own size, if smaller)
 
 
 @dataclass
@@ -39,6 +44,7 @@ class ExportOptions:
     invert_copper: bool = False
     png: bool = False
     dpi: int = 1000
+    hole_tolerance: float = field(default_factory=lambda: settings.hole_tolerance_mm)
 
     @classmethod
     def from_dict(cls, d):
@@ -48,6 +54,10 @@ class ExportOptions:
         dpi = int(d.get("dpi") or settings.default_dpi)
         if not 1 <= dpi <= settings.max_dpi:
             raise ValueError(f"DPI must be between 1 and {settings.max_dpi}.")
+        tol = d.get("hole_tolerance")
+        tol = settings.hole_tolerance_mm if tol is None or tol == "" else float(tol)
+        if not -MAX_HOLE_TOLERANCE_MM <= tol <= MAX_HOLE_TOLERANCE_MM:
+            raise ValueError(f"Hole tolerance must be between -{MAX_HOLE_TOLERANCE_MM} and {MAX_HOLE_TOLERANCE_MM} mm.")
         return cls(
             sides=sides,
             kinds=kinds,
@@ -56,6 +66,7 @@ class ExportOptions:
             invert_copper=bool(d.get("invert_copper", False)),
             png=bool(d.get("png", False)),
             dpi=dpi,
+            hole_tolerance=tol,
         )
 
 
@@ -100,7 +111,7 @@ def _export_side(board, side, opts):
             fr, [_path(fr, outline, mirror, fill="none", stroke="red", stroke_width=0.1)], background=False)))
 
     if opts.kinds.get("drill") and (board.drills.holes or board.drills.slots):
-        files.append((name("drill"), _svg(fr, _drill_elems(fr, board.drills, mirror))))
+        files.append((name("drill"), _svg(fr, _drill_elems(fr, board.drills, mirror, opts.hole_tolerance))))
 
     return files
 
@@ -115,13 +126,19 @@ def _path(fr, geom, mirror, fill="black", stroke="none", stroke_width=0.0):
     return f'  <path {" ".join(attrs)}/>'
 
 
-def _drill_elems(fr, drills, mirror):
+def _shrink(size, tol):
+    """Hole diameter / slot width after tolerance, floored at MIN_HOLE_MM (or the original size)."""
+    return max(size - tol, min(size, MIN_HOLE_MM))
+
+
+def _drill_elems(fr, drills, mirror, tol=0.0):
     body = []
     for x, y, d in drills.holes:
         cx, cy = fr.pt(x, y, mirror)
-        body.append(f'  <circle cx="{cx:.4f}" cy="{cy:.4f}" r="{d / 2:.4f}" fill="black" stroke="none"/>')
+        r = _shrink(d, tol) / 2
+        body.append(f'  <circle cx="{cx:.4f}" cy="{cy:.4f}" r="{r:.4f}" fill="black" stroke="none"/>')
     for x1, y1, x2, y2, w in drills.slots:
-        capsule = LineString([(x1, y1), (x2, y2)]).buffer(w / 2, quad_segs=16)
+        capsule = LineString([(x1, y1), (x2, y2)]).buffer(_shrink(w, tol) / 2, quad_segs=16)
         body.append(_path(fr, capsule, mirror))
     return body
 

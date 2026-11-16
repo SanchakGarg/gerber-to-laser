@@ -35,7 +35,7 @@ export interface BoardView {
 export interface AppConfig {
   roles: { id: string; label: string }[];
   kinds: string[];
-  defaults: { mirror_front: boolean; mirror_back: boolean; dpi: number; max_dpi: number };
+  defaults: { mirror_front: boolean; mirror_back: boolean; dpi: number; max_dpi: number; hole_tolerance_mm: number };
   max_upload_mb: number;
   board_thickness_mm: number;
   png_available: boolean;
@@ -49,6 +49,7 @@ export interface ExportOptions {
   invert_copper: boolean;
   png: boolean;
   dpi: number;
+  hole_tolerance: number;
 }
 
 async function json<T>(res: Response): Promise<T> {

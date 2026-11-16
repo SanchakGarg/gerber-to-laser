@@ -40,6 +40,7 @@ export function initExportDefaults() {
     mirror_front: c?.defaults.mirror_front ?? false,
     mirror_back: c?.defaults.mirror_back ?? true,
     dpi: c?.defaults.dpi ?? 1000,
+    hole_tolerance: c?.defaults.hole_tolerance_mm ?? 0.2,
   });
 }
 
@@ -69,6 +70,14 @@ export function renderExportPanel() {
   dpi.disabled = !o.png || !pngOk;
   dpi.addEventListener("change", () => setOpts({ dpi: Math.max(1, parseInt(dpi.value, 10) || 1000) }));
 
+  const tol = h("input", { type: "number", min: "-2", max: "2", step: "0.05", "aria-label": "Hole tolerance in mm" }) as HTMLInputElement;
+  tol.value = String(o.hole_tolerance);
+  tol.disabled = o.kinds.drill === false;
+  tol.addEventListener("change", () => {
+    const v = parseFloat(tol.value);
+    setOpts({ hole_tolerance: Number.isFinite(v) ? Math.min(2, Math.max(-2, v)) : 0 });
+  });
+
   const previewBtn = h("button", { type: "button", class: "btn" }, "Preview files") as HTMLButtonElement;
   const zipBtn = h("button", { type: "button", class: "btn btn-primary" }, "Download ZIP") as HTMLButtonElement;
   const nothing = !o.sides.length || !Object.values(o.kinds).some(Boolean);
@@ -93,6 +102,7 @@ export function renderExportPanel() {
         check("Also PNG", o.png && pngOk, (v) => setOpts({ png: v }), pngOk ? "" : "no rasterizer", !pngOk),
         h("label", { class: "check" }, "DPI", dpi),
       ),
+      h("label", { class: "check" }, "Hole tolerance", tol, "mm", h("small", {}, "drill holes cut this much smaller")),
     ),
     h("div", { class: "actions" }, previewBtn, zipBtn),
   );

@@ -38,6 +38,7 @@ Open http://localhost:8000 (or whatever `PORT` you set).
 | `BOARD_THICKNESS_MM` | `1.6` | Board thickness in the 3D view |
 | `DEFAULT_DPI` / `MAX_DPI` | `1000` / `2400` | PNG resolution default and limit |
 | `DEFAULT_MIRROR_FRONT` / `DEFAULT_MIRROR_BACK` | `false` / `true` | Initial mirror checkboxes |
+| `HOLE_TOLERANCE_MM` | `0.2` | Initial hole tolerance: drill holes/slots are cut this much smaller in diameter (negative = larger) |
 
 ## Output
 
@@ -50,11 +51,13 @@ board outline's bounding box, in millimetres at 1:1 scale, so all of them line u
 | `silk` | silkscreen ∩ outline | silkscreen artwork, as its own job |
 | `mask` | solder-mask openings ∩ outline | after etching, burn the leftover paint off the pads so they can be soldered (the plugin's `pads` pass) |
 | `cut` | outline only, red 0.1 mm stroke, no background | cut the board out |
-| `drill` | a dot per hole, a capsule per slot | drill targets |
+| `drill` | a dot per hole, a capsule per slot, shrunk by the hole tolerance | drill targets |
 
 Black means "laser fires here". **Mirror** flips X per side. Back files are mirrored by default because
 that artwork is seen through the board. **Invert copper** writes positive copper instead, if your
-process needs it. **Also PNG** rasterizes each SVG at the chosen DPI (the Docker image includes `rsvg-convert`).
+process needs it. **Hole tolerance** (default 0.2 mm) makes every drill hole and slot that much smaller in
+diameter/width than its real size, to make up for the laser's kerf; it never goes below 0.1 mm, and a
+negative value makes holes larger. **Also PNG** rasterizes each SVG at the chosen DPI (the Docker image includes `rsvg-convert`).
 
 Suggested order per side, same as the plugin: **copper → etch → drill → cut → mask**.
 

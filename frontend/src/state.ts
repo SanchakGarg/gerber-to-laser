@@ -27,6 +27,7 @@ export const state: State = {
     invert_copper: false,
     png: false,
     dpi: 1000,
+    hole_tolerance: 0.2,
   },
 };
 

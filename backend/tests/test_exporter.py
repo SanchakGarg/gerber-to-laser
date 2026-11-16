@@ -96,3 +96,27 @@ def test_zip(board):
     data = export_zip(board, ExportOptions(sides=("front",)))
     names = zipfile.ZipFile(io.BytesIO(data)).namelist()
     assert "test_front_copper.svg" in names and len(names) == 5
+
+
+def _drill_r(text):
+    return float(re.search(r'<circle [^>]*r="([\d.]+)"', text).group(1))
+
+
+def test_hole_tolerance_default_shrinks_by_0_2(board):
+    # fixture hole is 0.8 mm; default tolerance 0.2 mm -> 0.6 mm diameter
+    assert _drill_r(files(board)["test_front_drill.svg"]) == pytest.approx(0.3)
+
+
+def test_hole_tolerance_configurable(board):
+    assert _drill_r(files(board, hole_tolerance=0)["test_front_drill.svg"]) == pytest.approx(0.4)
+    assert _drill_r(files(board, hole_tolerance=0.5)["test_front_drill.svg"]) == pytest.approx(0.15)
+    assert _drill_r(files(board, hole_tolerance=-0.1)["test_front_drill.svg"]) == pytest.approx(0.45)
+    # never shrinks below the 0.1 mm floor
+    assert _drill_r(files(board, hole_tolerance=2)["test_front_drill.svg"]) == pytest.approx(0.05)
+
+
+def test_hole_tolerance_from_dict():
+    assert ExportOptions.from_dict({}).hole_tolerance == pytest.approx(0.2)
+    assert ExportOptions.from_dict({"hole_tolerance": 0.15}).hole_tolerance == pytest.approx(0.15)
+    with pytest.raises(ValueError):
+        ExportOptions.from_dict({"hole_tolerance": 5})

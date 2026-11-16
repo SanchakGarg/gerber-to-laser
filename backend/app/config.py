@@ -34,6 +34,7 @@ class Settings:
     max_dpi: int
     default_mirror_front: bool
     default_mirror_back: bool
+    hole_tolerance_mm: float
     static_dir: str
 
 
@@ -55,6 +56,7 @@ def load_settings() -> Settings:
         max_dpi=_num("MAX_DPI", 2400, int),
         default_mirror_front=_bool("DEFAULT_MIRROR_FRONT", False),
         default_mirror_back=_bool("DEFAULT_MIRROR_BACK", True),
+        hole_tolerance_mm=_num("HOLE_TOLERANCE_MM", 0.2),
         static_dir=os.environ.get(
             "STATIC_DIR",
             os.path.join(os.path.dirname(__file__), "..", "..", "frontend", "dist"),

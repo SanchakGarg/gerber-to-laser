@@ -51,6 +51,7 @@ def config():
             "mirror_back": settings.default_mirror_back,
             "dpi": settings.default_dpi,
             "max_dpi": settings.max_dpi,
+            "hole_tolerance_mm": settings.hole_tolerance_mm,
         },
         "max_upload_mb": settings.max_upload_mb,
         "board_thickness_mm": settings.board_thickness_mm,
