@@ -51,7 +51,7 @@ board outline's bounding box, in millimetres at 1:1 scale, so all of them line u
 | `silk` | silkscreen ∩ outline | silkscreen artwork, as its own job |
 | `mask` | solder-mask openings ∩ outline | after etching, burn the leftover paint off the pads so they can be soldered (the plugin's `pads` pass) |
 | `cut` | outline only, red 0.1 mm stroke, no background | cut the board out |
-| `drill` | a dot per hole, a capsule per slot, shrunk by the hole tolerance | drill targets |
+| `drill` | hole and slot outlines, red 0.1 mm stroke, no background, shrunk by the hole tolerance. **One file only**, from the front (or the back if only back is exported); the name says which | cut the holes out |
 
 Black means "laser fires here". **Mirror** flips X per side. Back files are mirrored by default because
 that artwork is seen through the board. **Invert copper** writes positive copper instead, if your

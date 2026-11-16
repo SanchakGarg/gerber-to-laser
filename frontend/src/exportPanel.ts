@@ -6,7 +6,7 @@ const KIND_LABELS: Record<string, [string, string]> = {
   silk: ["Silkscreen", ""],
   mask: ["Solder mask", "openings"],
   cut: ["Cut outline", ""],
-  drill: ["Drill", ""],
+  drill: ["Drill", "hole outlines"],
 };
 
 function h<K extends keyof HTMLElementTagNameMap>(tag: K, attrs: Record<string, string> = {}, ...kids: (Node | string)[]) {

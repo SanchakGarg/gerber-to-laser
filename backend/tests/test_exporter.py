@@ -34,7 +34,7 @@ def test_file_set_and_names(board):
     assert set(f) == {
         "test_front_copper.svg", "test_front_silk.svg", "test_front_mask.svg",
         "test_front_cut.svg", "test_front_drill.svg",
-        "test_back_copper.svg", "test_back_cut.svg", "test_back_drill.svg",
+        "test_back_copper.svg", "test_back_cut.svg",
     }
 
 
@@ -72,7 +72,7 @@ def test_y_down_and_mirror(board):
 
 def test_back_mirrored_by_default(board):
     f = files(board)
-    assert 'cx="5.0000" cy="8.0000"' in f["test_back_drill.svg"]
+    assert 'cx="5.0000" cy="8.0000"' in files(board, sides=("back",))["test_back_drill.svg"]
     back = parse_svg(f["test_back_copper.svg"])
     front = parse_svg(f["test_front_copper.svg"])
     # region at gerber x 101.5..102.5 is unburned; mirrored it sits at x 7.5..8.5
@@ -120,3 +120,16 @@ def test_hole_tolerance_from_dict():
     assert ExportOptions.from_dict({"hole_tolerance": 0.15}).hole_tolerance == pytest.approx(0.15)
     with pytest.raises(ValueError):
         ExportOptions.from_dict({"hole_tolerance": 5})
+
+
+def test_drill_is_cut_outlines(board):
+    # holes are laser-cut, so the drill file looks like the cut file: strokes only, no background
+    svg = files(board)["test_front_drill.svg"]
+    assert "<rect" not in svg
+    assert 'fill="black"' not in svg
+    assert re.search(r'<circle [^>]*fill="none" stroke="red" stroke-width="0.1"', svg)
+
+
+def test_single_drill_file_named_by_side(board):
+    assert [k for k in files(board) if "drill" in k] == ["test_front_drill.svg"]
+    assert [k for k in files(board, sides=("back",)) if "drill" in k] == ["test_back_drill.svg"]

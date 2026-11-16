@@ -8,9 +8,10 @@ Files per side, `<board>_<side>_<kind>.svg`:
 | silk   | silkscreen ∩ outline    (positive)              | silkscreen artwork, its own job                 |
 | mask   | solder-mask openings ∩ outline (positive)       | strip paint off pads after etch (plugin "pads") |
 | cut    | outline, fill none, red 0.1 mm stroke, no bg    | cut the board out                               |
-| drill  | one circle per hole, filled capsule per slot    | drill targets                                   |
+| drill  | hole/slot outlines, same style as cut           | cut the holes out                               |
 
-Drill holes and slots are shrunk by `hole_tolerance` (diameter/width, mm) so the laser kerf
+Drill is written once, from the first exported side (front when both): `<board>_front_drill.svg`
+or `<board>_back_drill.svg`, mirrored like that side. Holes and slots are shrunk by `hole_tolerance` (diameter/width, mm) so the laser kerf
 doesn't overcut them; a negative tolerance enlarges them.
 
 All files share the board-outline bbox, so they overlay 1:1. Mirror flips X per side.
@@ -32,6 +33,7 @@ from .geometry import clean
 
 KINDS = ("copper", "silk", "mask", "cut", "drill")
 MAX_HOLE_TOLERANCE_MM = 2.0
+CUT_STYLE = {"fill": "none", "stroke": "red", "stroke_width": 0.1}
 MIN_HOLE_MM = 0.1   # tolerance never shrinks a hole below this (or below its own size, if smaller)
 
 
@@ -74,11 +76,13 @@ def export_svgs(board: Board, opts: ExportOptions):
     """Return [(filename, svg_text)] for every requested file that has content."""
     out = []
     for side in opts.sides:
-        out.extend(_export_side(board, side, opts))
+        # Holes go through the board, so front and back drill files would be identical:
+        # emit one, from the first exported side (front when both); its name says which.
+        out.extend(_export_side(board, side, opts, drill=side == opts.sides[0]))
     return out
 
 
-def _export_side(board, side, opts):
+def _export_side(board, side, opts, drill=True):
     roles = SIDE_ROLES[side]
     mirror = opts.mirror_front if side == "front" else opts.mirror_back
     fr = board.frame
@@ -107,11 +111,12 @@ def _export_side(board, side, opts):
     if opts.kinds.get("cut"):
         # Laser software imports the background rect as a shape and would cut it;
         # the outline alone already spans the bbox.
-        files.append((name("cut"), _svg(
-            fr, [_path(fr, outline, mirror, fill="none", stroke="red", stroke_width=0.1)], background=False)))
+        files.append((name("cut"), _svg(fr, [_path(fr, outline, mirror, **CUT_STYLE)], background=False)))
 
-    if opts.kinds.get("drill") and (board.drills.holes or board.drills.slots):
-        files.append((name("drill"), _svg(fr, _drill_elems(fr, board.drills, mirror, opts.hole_tolerance))))
+    if drill and opts.kinds.get("drill") and (board.drills.holes or board.drills.slots):
+        # Holes are cut with the laser too, so they get the cut file's look: outlines, no background.
+        files.append((name("drill"), _svg(
+            fr, _drill_elems(fr, board.drills, mirror, opts.hole_tolerance), background=False)))
 
     return files
 
@@ -136,10 +141,11 @@ def _drill_elems(fr, drills, mirror, tol=0.0):
     for x, y, d in drills.holes:
         cx, cy = fr.pt(x, y, mirror)
         r = _shrink(d, tol) / 2
-        body.append(f'  <circle cx="{cx:.4f}" cy="{cy:.4f}" r="{r:.4f}" fill="black" stroke="none"/>')
+        body.append(f'  <circle cx="{cx:.4f}" cy="{cy:.4f}" r="{r:.4f}" fill="none" stroke="red" '
+                    f'stroke-width="{CUT_STYLE["stroke_width"]}"/>')
     for x1, y1, x2, y2, w in drills.slots:
         capsule = LineString([(x1, y1), (x2, y2)]).buffer(_shrink(w, tol) / 2, quad_segs=16)
-        body.append(_path(fr, capsule, mirror))
+        body.append(_path(fr, capsule, mirror, **CUT_STYLE))
     return body
 
 
