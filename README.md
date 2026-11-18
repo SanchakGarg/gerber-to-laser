@@ -1,16 +1,19 @@
 # Gerber → Laser
 
-A small web app that turns a set of Gerber + Excellon files into laser-ready SVGs, one file per
-layer and side, for making PCBs on a diode laser (xTool-style) by ablating spray-painted
-copper-clad board. It is the web version of the
+A small web app that turns a set of Gerber + Excellon files into ready-to-run **xTool projects
+(`.xcs`)**, one per board side, for making PCBs on a laser by ablating copper or spray-painted
+copper-clad board. It can also write the older laser-ready SVGs, one file per layer and side. It is the web version of the
 [PCB Fab Laser](https://github.com/saikhurana98/kicad-plugin-pcb-fab-laser) KiCad plugin and uses the
 same export rules, but works from Gerbers, so any EDA tool's output works (KiCad, Altium, Eagle, EasyEDA…).
 
 - Upload a `.zip`, a folder, or the loose files (drill file included).
-- **Sidebar**: every detected layer, with show/hide and a dropdown to fix a wrongly guessed layer type.
+- **Layers**: every detected layer, with show/hide (per layer or per side) and a dropdown to fix a wrongly guessed layer type.
 - **2D view**: all layers stacked, pan/zoom, top/bottom flip, cursor position in mm.
 - **3D view**: the board built from the layers (substrate, copper, mask, silkscreen, holes).
-- **Export**: per side (front / back / both), with per-side mirroring, preview of every file, ZIP download.
+- **Mounting holes**: click *Pick mounting holes*, the board fades and you click the holes your jig uses.
+- **Bake XCS**: a live preview of the front and back xTool projects on the laser bed, a show/hide toggle per
+  layer, X/Y offsets for the cut and etch lasers, and download links for `front.xcs`, `back.xcs` or both as a zip.
+- **More formats**: the per-layer SVG (+PNG) zip, with mirroring and a preview of every file.
 
 ## Run it
 
@@ -39,8 +42,41 @@ Open http://localhost:8000 (or whatever `PORT` you set).
 | `DEFAULT_DPI` / `MAX_DPI` | `1000` / `2400` | PNG resolution default and limit |
 | `DEFAULT_MIRROR_FRONT` / `DEFAULT_MIRROR_BACK` | `false` / `true` | Initial mirror checkboxes |
 | `HOLE_TOLERANCE_MM` | `0.2` | Initial hole tolerance: drill holes/slots are cut this much smaller in diameter (negative = larger) |
+| `XCS_BED_WIDTH_MM` / `XCS_BED_HEIGHT_MM` | `220` / `220` | Laser work area; the board is centred on it (xTool F2 Ultra) |
+| `MOUNTING_HOLE_MM` | `2.0` | Initial diameter of the jig holes in the *Mounting holes* layer |
+| `XCS_PRESETS` | *(empty)* | Path to a laser presets file; empty = `backend/app/xcs_presets.json` |
 
-## Output
+## xTool `.xcs` export
+
+Two projects, `<board>_front.xcs` and `<board>_back.xcs`, that open in xTool Studio / xTool Creative Space.
+In each one the board's bounding box is centred on the bed, and the back side is mirrored because it is
+worked on after flipping the board. Every job is its own layer, with its own colour:
+
+| Layer | Colour | Process | Offset | Content |
+|---|---|---|---|---|
+| Mounting holes | `#A23CF0` | cut | etch | a 2 mm hole (configurable) centred on each hole you picked, for drilling your jig |
+| Copper · engrave | `#000000` | fill engrave | etch | board outline − copper (negative; **Invert copper** burns the traces instead) |
+| Silkscreen · etch | `#2E6BFF` | fill engrave | etch | silkscreen ∩ outline |
+| Solder mask · etch | `#19A974` | fill engrave | etch | solder-mask openings ∩ outline |
+| Holes · engrave | `#E1C000` | fill engrave | etch | every hole/slot, filled, shrunk by the hole tolerance |
+| Holes · cut | `#FF7F56` | cut | cut | every hole/slot outline, shrunk by the hole tolerance |
+| Board outline · cut | `#FE0002` | cut | cut | the outline, with inner cut-outs as their own paths |
+
+- **Show/hide**: a hidden layer is left out of that side's file completely.
+- **Offsets**: the cut laser and the etch laser rarely land on exactly the same spot. *Cut* moves the cut
+  layers and *Etch* moves the engrave/etch layers (±10 mm, 0.05 mm steps). The mounting holes follow the etch
+  offset, so they sit on the etched artwork. Offsets, the jig-hole size and hidden layers are remembered
+  in the browser.
+- **Mounting holes** are extra. The picked holes still get cut at their real size in the hole layers.
+- **Laser settings** (power, speed, passes, light source) come from
+  [`backend/app/xcs_presets.json`](backend/app/xcs_presets.json). They were copied from an xTool Studio
+  project for the F2 Ultra. Silkscreen and mask have no measured values yet, so treat them as starting
+  points and tune them in xTool. xTool's own kerf compensation is off, because the hole tolerance already
+  covers it.
+
+The `.xcs` format is xTool's JSON project file; the writer (`backend/app/xcs.py`) documents what is known about it.
+
+## SVG output (More formats)
 
 Files are named `<board>_<side>_<kind>.svg`, with `<side>` = `front` or `back`. Every file uses the
 board outline's bounding box, in millimetres at 1:1 scale, so all of them line up in the laser software.
@@ -60,6 +96,10 @@ diameter/width than its real size, to make up for the laser's kerf; it never goe
 negative value makes holes larger. **Also PNG** rasterizes each SVG at the chosen DPI (the Docker image includes `rsvg-convert`).
 
 Suggested order per side, same as the plugin: **copper → etch → drill → cut → mask**.
+
+Every download is a plain link to the server (`GET /api/session/<id>/download/<token>`, sent as an
+attachment), so the browser's own download manager saves it. That is what makes downloads work in Arc and Dia
+as well as Chrome, Edge, Safari and Firefox.
 
 ### How layers are recognised
 
@@ -103,9 +143,17 @@ backend/app/
   frame.py      board-relative coordinates, Y-down, mirroring, SVG path output
   board.py      a parsed upload and its derived geometry / API view
   exporter.py   laser SVG/PNG/ZIP export (port of the plugin's exporter)
-  main.py       FastAPI routes + static UI
+  xcs.py        xTool .xcs project export (front/back, layers, offsets, mounting holes)
+  xcs_presets.json  laser settings written into every .xcs
+  main.py       FastAPI routes + download links + static UI
 frontend/src/
-  sidebar.ts  view2d.ts  view3d.ts  exportPanel.ts  main.ts  styles/notebook.css
+  main.ts        wiring, steps, pick mode
+  sidebar.ts     board ticket, notes, Gerber layer list
+  view2d.ts      2D board view + mounting-hole picking
+  view3d.ts      3D board view (three.js)
+  xcsPanel.ts    "Bake XCS": bed previews, layer toggles, offsets, downloads
+  moreFormats.ts SVG/PNG zip export
+  styles/riso.css  the risograph look (palette mirrored in palette.ts)
 ```
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for the commit message convention.
