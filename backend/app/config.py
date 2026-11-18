@@ -35,6 +35,10 @@ class Settings:
     default_mirror_front: bool
     default_mirror_back: bool
     hole_tolerance_mm: float
+    xcs_bed_width_mm: float
+    xcs_bed_height_mm: float
+    mounting_hole_mm: float
+    xcs_presets: str
     static_dir: str
 
 
@@ -57,6 +61,11 @@ def load_settings() -> Settings:
         default_mirror_front=_bool("DEFAULT_MIRROR_FRONT", False),
         default_mirror_back=_bool("DEFAULT_MIRROR_BACK", True),
         hole_tolerance_mm=_num("HOLE_TOLERANCE_MM", 0.2),
+        xcs_bed_width_mm=_num("XCS_BED_WIDTH_MM", 220.0),
+        xcs_bed_height_mm=_num("XCS_BED_HEIGHT_MM", 220.0),
+        mounting_hole_mm=_num("MOUNTING_HOLE_MM", 2.0),
+        xcs_presets=os.environ.get("XCS_PRESETS", "").strip()
+        or os.path.join(os.path.dirname(__file__), "xcs_presets.json"),
         static_dir=os.environ.get(
             "STATIC_DIR",
             os.path.join(os.path.dirname(__file__), "..", "..", "frontend", "dist"),

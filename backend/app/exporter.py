@@ -82,8 +82,26 @@ def export_svgs(board: Board, opts: ExportOptions):
     return out
 
 
-def _export_side(board, side, opts, drill=True):
+def side_art(board, side, invert_copper=False):
+    """Laser artwork per kind for one side, in Gerber coordinates. None = nothing to write.
+
+    copper: outline − copper (burn everything that is not copper), or copper ∩ outline when inverted.
+    It is kept even when empty, as long as the side has a copper layer. silk/mask: ∩ outline, if any.
+    """
     roles = SIDE_ROLES[side]
+    outline = board.outline
+    art = {"copper": None, "silk": None, "mask": None}
+    if board.has_role(roles["copper"]):
+        copper = board.role_geom(roles["copper"])
+        art["copper"] = clean(copper.intersection(outline)) if invert_copper else clean(outline.difference(copper))
+    for kind in ("silk", "mask"):
+        if board.has_role(roles[kind]):
+            g = clean(board.role_geom(roles[kind]).intersection(outline))
+            art[kind] = None if g.is_empty else g
+    return art
+
+
+def _export_side(board, side, opts, drill=True):
     mirror = opts.mirror_front if side == "front" else opts.mirror_back
     fr = board.frame
     outline = board.outline
@@ -92,21 +110,10 @@ def _export_side(board, side, opts, drill=True):
         return f"{board.name}_{side}_{kind}.svg"
 
     files = []
-
-    if opts.kinds.get("copper") and board.has_role(roles["copper"]):
-        copper = board.role_geom(roles["copper"])
-        art = clean(copper.intersection(outline)) if opts.invert_copper else clean(outline.difference(copper))
-        files.append((name("copper"), _svg(fr, [_path(fr, art, mirror)])))
-
-    if opts.kinds.get("silk") and board.has_role(roles["silk"]):
-        silk = clean(board.role_geom(roles["silk"]).intersection(outline))
-        if not silk.is_empty:
-            files.append((name("silk"), _svg(fr, [_path(fr, silk, mirror)])))
-
-    if opts.kinds.get("mask") and board.has_role(roles["mask"]):
-        mask = clean(board.role_geom(roles["mask"]).intersection(outline))
-        if not mask.is_empty:
-            files.append((name("mask"), _svg(fr, [_path(fr, mask, mirror)])))
+    art = side_art(board, side, opts.invert_copper)
+    for kind in ("copper", "silk", "mask"):
+        if opts.kinds.get(kind) and art[kind] is not None:
+            files.append((name(kind), _svg(fr, [_path(fr, art[kind], mirror)])))
 
     if opts.kinds.get("cut"):
         # Laser software imports the background rect as a shape and would cut it;
@@ -131,7 +138,7 @@ def _path(fr, geom, mirror, fill="black", stroke="none", stroke_width=0.0):
     return f'  <path {" ".join(attrs)}/>'
 
 
-def _shrink(size, tol):
+def shrink_size(size, tol):
     """Hole diameter / slot width after tolerance, floored at MIN_HOLE_MM (or the original size)."""
     return max(size - tol, min(size, MIN_HOLE_MM))
 
@@ -140,11 +147,11 @@ def _drill_elems(fr, drills, mirror, tol=0.0):
     body = []
     for x, y, d in drills.holes:
         cx, cy = fr.pt(x, y, mirror)
-        r = _shrink(d, tol) / 2
+        r = shrink_size(d, tol) / 2
         body.append(f'  <circle cx="{cx:.4f}" cy="{cy:.4f}" r="{r:.4f}" fill="none" stroke="red" '
                     f'stroke-width="{CUT_STYLE["stroke_width"]}"/>')
     for x1, y1, x2, y2, w in drills.slots:
-        capsule = LineString([(x1, y1), (x2, y2)]).buffer(_shrink(w, tol) / 2, quad_segs=16)
+        capsule = LineString([(x1, y1), (x2, y2)]).buffer(shrink_size(w, tol) / 2, quad_segs=16)
         body.append(_path(fr, capsule, mirror, **CUT_STYLE))
     return body
 

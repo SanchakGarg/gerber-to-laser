@@ -1,9 +1,10 @@
-"""FastAPI app: upload Gerbers, inspect layers, export laser SVGs. Also serves the built UI."""
+"""FastAPI app: upload Gerbers, inspect layers, export xTool .xcs projects and laser SVGs. Also serves the built UI."""
 import logging
 import os
 import re
 import tempfile
 from pathlib import Path
+from urllib.parse import quote
 
 from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.concurrency import run_in_threadpool
@@ -17,13 +18,14 @@ from .config import settings
 from .exporter import KINDS, ExportOptions, export_svgs, export_zip, rasterizer
 from .loader import ROLE_LABELS, ROLES, UploadError, extract_upload
 from .sessions import store
+from . import xcs
 
 log = logging.getLogger("gerber2laser")
 app = FastAPI(title="Gerber → Laser", version="0.1.0")
 
 if settings.cors_origins:
     app.add_middleware(CORSMiddleware, allow_origins=list(settings.cors_origins),
-                       allow_methods=["*"], allow_headers=["*"])
+                       allow_methods=["*"], allow_headers=["*"], expose_headers=["Content-Disposition"])
 
 
 class RoleUpdate(BaseModel):
@@ -56,6 +58,12 @@ def config():
         "max_upload_mb": settings.max_upload_mb,
         "board_thickness_mm": settings.board_thickness_mm,
         "png_available": rasterizer()[0] is not None,
+        "xcs": {
+            "bed": {"w": settings.xcs_bed_width_mm, "h": settings.xcs_bed_height_mm},
+            "layers": xcs.layer_table(),
+            "mounting_hole_mm": settings.mounting_hole_mm,
+            "max_offset_mm": xcs.MAX_OFFSET_MM,
+        },
     }
 
 
@@ -125,6 +133,7 @@ async def export_preview(session_id: str, body: dict):
 
 @app.post("/api/session/{session_id}/export")
 async def export(session_id: str, body: dict):
+    """Build the SVG/PNG zip and hand back a download link (see download())."""
     board = _board(session_id)
     opts = _opts(body)
     try:
@@ -133,8 +142,55 @@ async def export(session_id: str, body: dict):
         raise HTTPException(400, str(e))
     except RuntimeError as e:
         raise HTTPException(500, str(e))
-    return Response(data, media_type="application/zip",
-                    headers={"Content-Disposition": f'attachment; filename="{board.name}_laser.zip"'})
+    return _link(board, f"{board.name}_laser.zip", "application/zip", data)
+
+
+@app.post("/api/session/{session_id}/xcs")
+async def export_xcs(session_id: str, body: dict):
+    """Preview of both xTool projects plus fresh download links for them (and a zip of both)."""
+    board = _board(session_id)
+    try:
+        opts = xcs.XcsOptions.from_dict(body)
+        prev, files = await run_in_threadpool(_xcs_build, board, opts)
+    except (TypeError, ValueError) as e:
+        raise HTTPException(400, str(e))
+    sides = {}
+    for side in opts.sides:
+        built = next((f for f in files if f[0] == side), None)
+        sides[side] = {
+            "layers": prev[side],
+            "file": _link(board, built[1], "application/octet-stream", built[2]) if built else None,
+        }
+    zipped = _link(board, f"{board.name}_xcs.zip", "application/zip", xcs.zip_files(files)) if files else None
+    return {"bed": {"w": settings.xcs_bed_width_mm, "h": settings.xcs_bed_height_mm},
+            "sides": sides, "zip": zipped}
+
+
+def _xcs_build(board, opts):
+    return xcs.preview(board, opts), xcs.export_xcs(board, opts)
+
+
+def _link(board, filename, media_type, data):
+    token = board.stash(filename, media_type, data)
+    return {"name": filename, "size": len(data), "url": f"/api/session/{board.id}/download/{token}"}
+
+
+@app.get("/api/session/{session_id}/download/{token}")
+def download(session_id: str, token: str):
+    """Serve a built file as a plain attachment.
+
+    The UI links here with a real <a href download>, so the browser's own download manager fetches
+    it. (Saving a fetch()ed blob through a short-lived blob: URL broke in Arc and Dia.)
+    """
+    item = _board(session_id).fetch(token)
+    if item is None:
+        raise HTTPException(404, "This download has expired. Export again.")
+    filename, media_type, data = item
+    return Response(data, media_type=media_type, headers={
+        "Content-Disposition": f"attachment; filename=\"{filename}\"; filename*=UTF-8''{quote(filename)}",
+        "Cache-Control": "no-store",
+        "X-Content-Type-Options": "nosniff",
+    })
 
 
 def _rm(path):

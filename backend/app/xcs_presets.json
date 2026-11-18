@@ -1,0 +1,193 @@
+{
+  "_about": "Laser presets for the xTool .xcs export. Values were copied from an xTool Studio 1.6.8 project for the F2 Ultra. Edit freely and restart the server; or point XCS_PRESETS at a copy. 'baseNodes' are written into every shape (xTool expects all five process types); 'layers' overrides the parameters of the process each layer actually uses.",
+  "project": {
+    "extId": "GS004-CLASS-4",
+    "extName": "F2 Ultra",
+    "version": "1.6.8",
+    "minRequiredVersion": "2.6.0",
+    "appMinRequiredVersion": "",
+    "webMinRequiredVersion": "",
+    "canvasExtendInfo": {
+      "version": "2.15.108-hotfix",
+      "minCanvasVersion": "0.0.0",
+      "displayProcessConfigMap": {},
+      "rulerPluginData": {
+        "rulerGuide": []
+      },
+      "type": "2d",
+      "gridOptions": {
+        "color": "normal",
+        "isShow": true
+      }
+    }
+  },
+  "device": {
+    "id": "GS004-CLASS-4",
+    "power": [
+      60,
+      40
+    ],
+    "laserPlane": {
+      "material": 800455902000133,
+      "lightSourceMode": "blue",
+      "thickness": 21.8,
+      "perimeter": null,
+      "diameter": null,
+      "isProcessByLayer": true,
+      "pathPlanning": "custom",
+      "fillPlanning": "separate",
+      "dreedyTsp": true,
+      "avoidSmokeModal": false,
+      "scanDirection": "topToBottom",
+      "enableOddEvenKerf": true,
+      "fanGear": 0,
+      "precautionCodes": [
+        "HIGH_REFLECT"
+      ],
+      "purifierGear": 0,
+      "xcsUsed": []
+    }
+  },
+  "baseNodes": {
+    "COLOR_FILL_ENGRAVE": {
+      "materialType": "customize",
+      "parameter": {
+        "customize": {
+          "bitmapEngraveMode": "normal",
+          "speed": 80,
+          "density": 100,
+          "dotDuration": 100,
+          "dpi": 500,
+          "processingLightSource": "blue",
+          "power": 1,
+          "repeat": 1,
+          "bitmapScanMode": "zMode",
+          "pulseWidth": 200,
+          "mopaFrequency": 65,
+          "notResize": true,
+          "scanAngle": 0,
+          "angleType": 2,
+          "crossAngle": false
+        }
+      },
+      "planType": "blue"
+    },
+    "FILL_VECTOR_ENGRAVING": {
+      "materialType": "customize",
+      "parameter": {
+        "customize": {
+          "bitmapEngraveMode": "normal",
+          "speed": 2000,
+          "density": 300,
+          "needGapNumDensity": true,
+          "dotDuration": 100,
+          "dpi": 500,
+          "processingLightSource": "red",
+          "power": 76,
+          "repeat": 12,
+          "bitmapScanMode": "zMode",
+          "pulseWidth": 60,
+          "mopaFrequency": 80,
+          "scanAngle": 45,
+          "angleType": 2,
+          "crossAngle": false,
+          "enableDelayPerLine": false,
+          "delayPerLine": 0.3,
+          "outlineTrace": false,
+          "enableKerf": false,
+          "kerfDistance": 0
+        }
+      },
+      "planType": "red"
+    },
+    "INTAGLIO": {
+      "materialType": "customize",
+      "parameter": {
+        "customize": {
+          "bitmapEngraveMode": "normal",
+          "speed": 80,
+          "density": 100,
+          "processingLightSource": "blue",
+          "power": 1,
+          "repeat": 1,
+          "bitmapScanMode": "zMode",
+          "sliceNumber": 100,
+          "processAngle": 15,
+          "zAxisMove": false,
+          "zLayers": 1,
+          "zDecline": 0.01,
+          "pulseWidth": 200,
+          "mopaFrequency": 65
+        }
+      },
+      "planType": "blue"
+    },
+    "VECTOR_CUTTING": {
+      "materialType": "customize",
+      "parameter": {
+        "customize": {
+          "processingLightSource": "red",
+          "power": 100,
+          "speed": 250,
+          "repeat": 30,
+          "cuttingDrop": true,
+          "sinkingMethod": "one",
+          "firstCuttingDropValue": 0.01,
+          "cuttingDropValue": 0.01,
+          "descentIntervalDescent": 1,
+          "descentPerStep": 0.01,
+          "enableKerf": false,
+          "kerfDistance": 0,
+          "enableBreakPoint": false,
+          "breakPointSize": 0.5,
+          "breakPointCount": 2,
+          "breakPointMode": "count",
+          "breakPointDistance": 100,
+          "breakPointPower": 0,
+          "pulseWidth": 200,
+          "mopaFrequency": 45,
+          "wobbleEnable": false,
+          "wobbleDiameter": 0.05,
+          "wobbleSpacing": 0.015
+        }
+      },
+      "planType": "blue"
+    },
+    "VECTOR_ENGRAVING": {
+      "materialType": "customize",
+      "parameter": {
+        "customize": {
+          "speed": 20,
+          "processingLightSource": "blue",
+          "power": 1,
+          "repeat": 1,
+          "pulseWidth": 200,
+          "mopaFrequency": 65,
+          "enableKerf": false,
+          "kerfDistance": 0
+        }
+      },
+      "planType": "blue"
+    }
+  },
+  "layers": {
+    "_note": "Kerf compensation is off: the app already shrinks holes by the hole tolerance. silk and mask have no measured values yet; they are starting guesses, tune them in xTool.",
+    "mounting": {},
+    "copper": {
+      "repeat": 12
+    },
+    "silk": {
+      "power": 30,
+      "repeat": 1
+    },
+    "mask": {
+      "power": 40,
+      "repeat": 2
+    },
+    "hole_engrave": {
+      "repeat": 8
+    },
+    "hole_cut": {},
+    "outline_cut": {}
+  }
+}

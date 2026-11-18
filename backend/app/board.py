@@ -1,7 +1,10 @@
 """A parsed upload: its layers, their roles, and the derived board geometry."""
+import secrets
 import shutil
+import threading
 import time
 import uuid
+from collections import OrderedDict
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -49,6 +52,11 @@ class Board:
     drill_geom: object = EMPTY
     frame: Frame = None
     outline_warning: str = None
+    # Built export files waiting to be fetched by a plain GET link: token -> (filename, media_type, bytes).
+    downloads: OrderedDict = field(default_factory=OrderedDict, repr=False)
+    # Derived export geometry keyed by its inputs; emptied whenever the layers change.
+    cache: dict = field(default_factory=dict, repr=False)
+    _dl_lock: object = field(default_factory=threading.Lock, repr=False)
 
     # ---------- construction ----------
 
@@ -103,6 +111,7 @@ class Board:
     # ---------- derived geometry ----------
 
     def rebuild(self):
+        self.cache.clear()
         self.outline_warning = None
         outline_layers = [l for l in self.layers if l.role == "outline"]
         outline = EMPTY
@@ -212,7 +221,25 @@ class Board:
             stem = stem[len(self.name):]
         return stem.strip("-_. ") or ROLE_LABELS["other"]
 
+    # ---------- downloads ----------
+
+    MAX_DOWNLOADS = 12
+
+    def stash(self, filename, media_type, data):
+        """Keep a built file for a later GET; returns its token. Oldest entries are dropped."""
+        token = secrets.token_urlsafe(12)
+        with self._dl_lock:
+            self.downloads[token] = (filename, media_type, data)
+            while len(self.downloads) > self.MAX_DOWNLOADS:
+                self.downloads.popitem(last=False)
+        return token
+
+    def fetch(self, token):
+        with self._dl_lock:
+            return self.downloads.get(token)
+
     def cleanup(self):
+        self.downloads.clear()
         shutil.rmtree(self.workdir, ignore_errors=True)
 
 
