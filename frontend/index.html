@@ -3,102 +3,117 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#f4efe6" />
     <title>Gerber to Laser</title>
-    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='3' y='5' width='26' height='22' rx='2' fill='%23fbf8ef' stroke='%232b4c9b' stroke-width='2'/%3E%3Cpath d='M8 12h10v4h6' fill='none' stroke='%232b4c9b' stroke-width='2.4' stroke-linecap='round'/%3E%3Ccircle cx='24' cy='16' r='2.4' fill='%23e0675f'/%3E%3C/svg%3E" />
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cg style='mix-blend-mode:multiply'%3E%3Ccircle cx='13' cy='13' r='10' fill='%23ff48b0'/%3E%3Ccircle cx='19' cy='15' r='10' fill='%230078bf' opacity='.85'/%3E%3Ccircle cx='15' cy='20' r='9' fill='%23ffe800' opacity='.9'/%3E%3C/g%3E%3Cpath d='M6 26 26 6' stroke='%231d1d1b' stroke-width='2.4' stroke-linecap='round'/%3E%3C/svg%3E" />
   </head>
   <body>
-    <div class="app">
-      <aside class="sidebar" aria-label="Layers and export">
-        <header class="brand">
-          <div class="brand-mark" aria-hidden="true"></div>
-          <div>
-            <h1>Gerber <span class="arrow">→</span> Laser</h1>
-            <p class="sub">Laser-ready SVGs from your Gerbers</p>
-          </div>
-        </header>
+    <header class="masthead">
+      <div class="wordmark" aria-label="Gerber to Laser">
+        <span class="wm wm-a" data-text="Gerber">Gerber</span>
+        <span class="wm-arrow" aria-hidden="true">→</span>
+        <span class="wm wm-b" data-text="Laser">Laser</span>
+      </div>
+      <p class="tagline">PCB files in, <mark>xTool jobs</mark> out.</p>
+      <nav aria-label="Steps">
+        <ol class="steps" id="steps">
+          <li><button type="button" class="stepchip" data-step="drop"><span class="n">1</span><span>Drop files</span></button></li>
+          <li><button type="button" class="stepchip" data-step="check"><span class="n">2</span><span>Check layers</span></button></li>
+          <li><button type="button" class="stepchip" data-step="mount"><span class="n">3</span><span>Mounting holes</span></button></li>
+          <li><button type="button" class="stepchip" data-step="bake"><span class="n">4</span><span>Bake XCS</span></button></li>
+        </ol>
+      </nav>
+    </header>
 
+    <div class="app">
+      <aside class="col col-left" aria-label="Board and layers">
         <section class="card upload" id="upload">
           <label class="drop" id="drop">
             <input type="file" id="file-input" multiple accept=".zip,.gbr,.ger,.gtl,.gbl,.gto,.gbo,.gts,.gbs,.gtp,.gbp,.gko,.gm1,.gml,.drl,.xln,.txt,.cmp,.sol,.plc,.pls,.stc,.sts,.dim,*" />
+            <span class="drop-art" aria-hidden="true"><i></i><i></i><i></i></span>
             <span class="drop-title">Drop Gerbers here</span>
             <span class="drop-hint">a .zip or the loose files, drill file included · <span id="max-mb">50</span> MB max</span>
-            <span class="btn btn-small">Choose files…</span>
+            <span class="btn btn-small drop-btn">Choose files…</span>
           </label>
-          <div class="board-meta" id="board-meta" hidden></div>
+          <div class="ticket" id="board-meta" hidden></div>
         </section>
 
         <div id="notes"></div>
 
         <section class="card" id="layers-card" hidden>
-          <div class="card-head">
-            <h2><span class="hl">Layers</span></h2>
+          <header class="card-head">
+            <h2 class="riso-title" data-text="Layers">Layers</h2>
             <div class="head-actions">
               <button class="link" id="show-all" type="button">show all</button>
-              <span class="dot-sep">·</span>
               <button class="link" id="hide-all" type="button">hide all</button>
             </div>
-          </div>
+          </header>
           <div id="layer-list"></div>
         </section>
-
-        <section class="card" id="export-card" hidden>
-          <div class="card-head">
-            <h2><span class="hl">Export for laser</span></h2>
-          </div>
-          <div id="export-panel"></div>
-        </section>
-
-        <footer class="foot">Settings follow the <em>PCB Fab Laser</em> KiCad plugin.</footer>
       </aside>
 
-      <main class="stage">
-        <section class="pane pane-2d">
-          <header class="pane-head">
-            <span class="tape">2D view</span>
-            <div class="seg" role="group" aria-label="View side">
-              <button type="button" class="seg-btn active" data-side="top">Top</button>
-              <button type="button" class="seg-btn" data-side="bottom">Bottom</button>
+      <main class="col col-main">
+        <section class="card viewer" id="viewer" aria-label="Board viewer">
+          <header class="viewer-head">
+            <div class="tabs" id="view-tabs" role="tablist" aria-label="View">
+              <button type="button" role="tab" data-view="2d" aria-selected="true" aria-controls="view2d">2D</button>
+              <button type="button" role="tab" data-view="3d" aria-selected="false" aria-controls="view3d" tabindex="-1">3D</button>
             </div>
-            <button type="button" class="btn btn-small" id="fit-2d">Fit</button>
+            <div class="seg" id="side-seg" role="group" aria-label="Side">
+              <button type="button" class="seg-btn active" data-side="top" aria-pressed="true">Top</button>
+              <button type="button" class="seg-btn" data-side="bottom" aria-pressed="false">Bottom</button>
+            </div>
+            <div class="seg" id="cam-seg" role="group" aria-label="Camera" hidden>
+              <button type="button" class="seg-btn" data-cam="top" aria-pressed="false">Top</button>
+              <button type="button" class="seg-btn" data-cam="bottom" aria-pressed="false">Bottom</button>
+              <button type="button" class="seg-btn" data-cam="iso" aria-pressed="false">Angle</button>
+            </div>
+            <span class="grow"></span>
+            <button type="button" class="btn btn-small btn-ghost" id="fit-2d" title="Fit the board (or double-click it)">Fit</button>
+            <button type="button" class="btn btn-pick" id="pick-btn" aria-pressed="false" disabled>
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2.4"/><path d="M12 1.5v4M12 18.5v4M1.5 12h4M18.5 12h4"/></svg>
+              <span class="label">Pick mounting holes</span>
+            </button>
           </header>
-          <div class="pane-body graph" id="view2d">
-            <div class="empty">
-              <p class="empty-title">Nothing on this page yet</p>
-              <p>Upload a Gerber set to see the board.</p>
+          <div class="viewer-body" id="viewer-body">
+            <div class="pane-body halftone" id="view2d" role="tabpanel" aria-label="2D view">
+              <div class="empty">
+                <div class="empty-art" aria-hidden="true"><i></i><i></i><i></i></div>
+                <p class="empty-title">Nothing printed yet</p>
+                <p>Upload a Gerber set to see the board. Scroll to zoom, drag to pan.</p>
+              </div>
             </div>
-          </div>
-          <div class="readout" id="readout"></div>
-        </section>
-
-        <section class="pane pane-3d">
-          <header class="pane-head">
-            <span class="tape tape-pink">3D view</span>
-            <div class="seg" role="group" aria-label="Camera">
-              <button type="button" class="seg-btn" data-cam="top">Top</button>
-              <button type="button" class="seg-btn" data-cam="bottom">Bottom</button>
-              <button type="button" class="seg-btn" data-cam="iso">Angle</button>
+            <div class="pane-body" id="view3d" role="tabpanel" aria-label="3D view" hidden>
+              <div class="empty">
+                <p class="empty-title">No board yet</p>
+                <p>Drag to orbit, scroll to zoom once a board is loaded.</p>
+              </div>
             </div>
-          </header>
-          <div class="pane-body" id="view3d">
-            <div class="empty">
-              <p class="empty-title">No board yet</p>
-              <p>Drag to orbit, scroll to zoom once a board is loaded.</p>
+            <div class="pick-pill" id="pick-pill" role="status" hidden>
+              <span class="pill-dot" aria-hidden="true"></span>
+              <span>Click holes to use them as <b>mounting holes</b> · <b id="pick-count">none yet</b></span>
+              <button type="button" class="link" id="pick-clear">clear</button>
+              <button type="button" class="btn btn-small btn-primary" id="pick-done">Done</button>
             </div>
+            <div class="readout" id="readout" aria-live="off"></div>
           </div>
         </section>
       </main>
+
+      <aside class="col col-right" aria-label="xTool export">
+        <section class="card xcs" id="xcs-card"></section>
+      </aside>
     </div>
+
+    <footer class="foot">Layer settings follow the <em>PCB Fab Laser</em> KiCad plugin. xTool files open in xTool Studio / Creative Space.</footer>
 
     <div class="sheet" id="sheet" hidden>
       <div class="sheet-backdrop" data-close></div>
       <div class="sheet-panel card" role="dialog" aria-modal="true" aria-labelledby="sheet-title">
-        <div class="card-head">
-          <h2 id="sheet-title"><span class="hl">Export preview</span></h2>
-          <div class="head-actions">
-            <button class="btn btn-primary btn-small" id="sheet-zip" type="button">Download ZIP</button>
-            <button class="btn btn-small" data-close type="button">Close</button>
-          </div>
-        </div>
+        <header class="card-head">
+          <h2 class="riso-title" id="sheet-title" data-text="SVG preview">SVG preview</h2>
+          <button class="btn btn-small" data-close type="button">Close</button>
+        </header>
         <p class="sheet-note">Black = where the laser fires. Every file shares the board's bounding box, so the files line up 1:1.</p>
         <div class="thumbs" id="thumbs"></div>
       </div>

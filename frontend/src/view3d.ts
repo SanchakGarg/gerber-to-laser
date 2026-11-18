@@ -1,14 +1,14 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import type { BoardView, Poly } from "./api";
-import { paper, styleFor } from "./palette";
+import { ink, styleFor } from "./palette";
 import { isVisible } from "./state";
 
 const CU = 0.035; // copper thickness, mm
 const MASK = 0.02;
 const SILK = 0.012;
 
-// Toon ramp: three flat tones, like shading done with a pencil.
+// Toon ramp: three flat tones, like a three-pass riso print.
 function toonRamp() {
   const t = new THREE.DataTexture(new Uint8Array([110, 190, 255]), 3, 1, THREE.RedFormat);
   t.minFilter = THREE.NearestFilter;
@@ -32,7 +32,7 @@ export class View3D {
 
   constructor(host: HTMLElement) {
     this.host = host;
-    this.scene.background = new THREE.Color(paper.paper);
+    this.scene.background = new THREE.Color(ink.paper);
     this.scene.add(new THREE.HemisphereLight(0xffffff, 0xd9cfb4, 1.6));
     const sun = new THREE.DirectionalLight(0xffffff, 1.8);
     sun.position.set(-40, 120, 60);
@@ -94,7 +94,7 @@ export class View3D {
       if (edges) {
         const lines = new THREE.LineSegments(
           new THREE.EdgesGeometry(geo, 25),
-          new THREE.LineBasicMaterial({ color: paper.ink, transparent: true, opacity: 0.85 }),
+          new THREE.LineBasicMaterial({ color: ink.ink, transparent: true, opacity: 0.85 }),
         );
         lines.position.z = z;
         g.add(lines);
@@ -109,7 +109,7 @@ export class View3D {
       });
 
     // substrate (holes already cut out); its ink edges belong to the outline layer
-    const body = slab(board.board.body, -t / 2, t, toon(paper.kraft));
+    const body = slab(board.board.body, -t / 2, t, toon(ink.board));
     const bodyEdges = body ? this.edgesOf(body, -t / 2) : null;
     const outline = board.layers.find((l) => l.role === "outline");
     if (outline && bodyEdges) this.track(outline.id, bodyEdges);
@@ -125,16 +125,16 @@ export class View3D {
         obj = slab(l.polys, top ? base : base - CU, CU, toon(st.color), true);
       } else if (l.role.endsWith("_silk")) {
         const z = top ? base + CU + MASK + 0.004 : base - CU - MASK - 0.004 - SILK;
-        obj = slab(l.polys, z, SILK, toon(l.role === "top_silk" ? "#3d3d3b" : "#5e5e5a"));
+        obj = slab(l.polys, z, SILK, toon(l.role === "top_silk" ? ink.paper3 : ink.paper2));
       } else if (l.role.endsWith("_paste")) {
-        obj = slab(l.polys, top ? base + CU : base - CU - 0.05, 0.05, toon(paper.hlYellow, 0.9));
+        obj = slab(l.polys, top ? base + CU : base - CU - 0.05, 0.05, toon(ink.yellow, 0.9));
       }
       if (obj) this.track(l.id, obj);
     }
 
-    // solder-mask coats (board minus openings), highlighter-tinted and see-through
-    this.coats.front = slab(board.board.coats.front, t / 2 + CU + 0.002, MASK, toon(paper.hlGreen, 0.5));
-    this.coats.back = slab(board.board.coats.back, -t / 2 - CU - 0.002 - MASK, MASK, toon(paper.hlPink, 0.5));
+    // solder-mask coats (board minus openings), ink-tinted and see-through
+    this.coats.front = slab(board.board.coats.front, t / 2 + CU + 0.002, MASK, toon(ink.green, 0.45));
+    this.coats.back = slab(board.board.coats.back, -t / 2 - CU - 0.002 - MASK, MASK, toon(ink.orange, 0.45));
 
     this.refreshVisibility();
     this.setCamera("iso");
@@ -144,7 +144,7 @@ export class View3D {
     const mesh = group.children[0] as THREE.Mesh;
     const lines = new THREE.LineSegments(
       new THREE.EdgesGeometry(mesh.geometry, 25),
-      new THREE.LineBasicMaterial({ color: paper.ink }),
+      new THREE.LineBasicMaterial({ color: ink.ink }),
     );
     lines.position.z = z;
     this.root.add(lines);
