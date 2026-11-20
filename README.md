@@ -54,7 +54,7 @@ worked on after flipping the board. Every job is its own layer, with its own col
 
 | Layer | Colour | Process | Offset | Content |
 |---|---|---|---|---|
-| Mounting holes | `#A23CF0` | cut | etch | a 2 mm hole (configurable) centred on each hole you picked, for drilling your jig |
+| Mounting holes | `#A23CF0` | cut | cut | a 2 mm hole (configurable) centred on each hole you picked, for drilling your jig |
 | Copper · engrave | `#000000` | fill engrave | etch | board outline − copper (negative; **Invert copper** burns the traces instead) |
 | Silkscreen · etch | `#2E6BFF` | fill engrave | etch | silkscreen ∩ outline |
 | Solder mask · etch | `#19A974` | fill engrave | etch | solder-mask openings ∩ outline |
@@ -64,8 +64,9 @@ worked on after flipping the board. Every job is its own layer, with its own col
 
 - **Show/hide**: a hidden layer is left out of that side's file completely.
 - **Offsets**: the cut laser and the etch laser rarely land on exactly the same spot. *Cut* moves the cut
-  layers and *Etch* moves the engrave/etch layers (±10 mm, 0.05 mm steps). The mounting holes follow the etch
-  offset, so they sit on the etched artwork. Offsets, the jig-hole size and hidden layers are remembered
+  layers and *Etch* moves the engrave/etch layers (±10 mm, 0.05 mm steps). The mounting holes follow the cut
+  offset: the board flips about their centre line, so they must line up with the cut holes, or the back
+  side lands 2 × (etch − cut) away from the front. Offsets, the jig-hole size and hidden layers are remembered
   in the browser.
 - **Mounting holes** are extra. The picked holes still get cut at their real size in the hole layers.
 - **Laser settings** (power, speed, passes, light source) come from

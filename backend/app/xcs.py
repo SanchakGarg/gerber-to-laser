@@ -14,7 +14,7 @@ Layers per side (each its own colour, all in one file):
 
 | key          | process              | offset group | geometry                                          |
 |--------------|----------------------|--------------|---------------------------------------------------|
-| mounting     | cut                  | etch         | jig holes (default 2 mm) at the picked holes      |
+| mounting     | cut                  | cut          | jig holes (default 2 mm) at the picked holes      |
 | copper       | fill engrave         | etch         | outline − copper (or copper ∩ outline, inverted)  |
 | silk         | fill engrave         | etch         | silkscreen ∩ outline                              |
 | mask         | fill engrave         | etch         | solder-mask openings ∩ outline                    |
@@ -24,7 +24,8 @@ Layers per side (each its own colour, all in one file):
 
 The board's bbox is centred on the laser bed; the back side is mirrored (DEFAULT_MIRROR_BACK).
 Cut and etch layers each get their own X/Y offset, because the two lasers do not line up exactly.
-Mounting holes follow the etch offset, so they sit on the etched artwork.
+Mounting holes follow the cut offset: they are cut, and the board flips about their centre line, so
+they must share the frame of the hole/outline cuts or the back side lands 2x(etch - cut) away.
 """
 import copy
 import io
@@ -71,7 +72,7 @@ class LayerSpec:
 
 # Order = suggested processing order (xTool `layerData.order`): jig holes first, outline last.
 LAYERS = (
-    LayerSpec("mounting", "Mounting holes", "#a23cf0", CUT, "etch"),
+    LayerSpec("mounting", "Mounting holes", "#a23cf0", CUT, "cut"),
     LayerSpec("copper", "Copper · engrave", "#000000", FILL, "etch"),
     LayerSpec("silk", "Silkscreen · etch", "#2e6bff", FILL, "etch"),
     LayerSpec("mask", "Solder mask · etch", "#19a974", FILL, "etch"),

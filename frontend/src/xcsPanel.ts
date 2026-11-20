@@ -147,7 +147,7 @@ function build() {
   });
   const mounting = h("section", { class: "block mount" },
     h("div", { class: "block-head" }, h("h3", {}, "Mounting holes ", mountCount), mountClear),
-    h("p", { class: "hint" }, "Pick holes to get small jig holes at their centres, on their own layer, placed with the etch offset. Those holes still get cut at full size in the hole layers."),
+    h("p", { class: "hint" }, "Pick holes to get small jig holes at their centres, on their own layer, placed with the cut offset so the flipped back side lines up. Those holes still get cut at full size in the hole layers."),
     h("div", { class: "row" }, mountPick, h("label", { class: "inline-field" }, "Ø", mountDiam, "mm")),
   );
 

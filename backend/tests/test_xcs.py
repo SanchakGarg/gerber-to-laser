@@ -161,8 +161,8 @@ def test_mounting_layer(board2):
         mount = layers[color("mounting")]
         assert len(mount) == 1
         assert mount[0]["width"] == pytest.approx(2.0) and not mount[0]["isFill"]
-        # follows the etch offset, not the cut one
-        assert centre(mount[0]) == pytest.approx((cx + 0.3, 108 + 0.4))
+        # follows the cut offset (the flip axis must match the cut layers), not the etch one
+        assert centre(mount[0]) == pytest.approx((cx + 9, 108 + 9))
         # the hole keeps its own size in the normal hole layers
         assert len(layers[color("hole_cut")]) == 2 and len(layers[color("hole_engrave")]) == 2
 
