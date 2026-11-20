@@ -12,6 +12,8 @@ export interface State {
   side2d: "top" | "bottom";
   pickMode: boolean;
   mounting: HoleRef[];
+  /** Label picked holes with their size and the distances between them on the 2D view. */
+  showDims: boolean;
   xcsOpts: XcsOpts;
   xcs: XcsResult | null;
   xcsPending: boolean;
@@ -64,6 +66,25 @@ function saveXcsOpts(o: XcsOpts) {
   }
 }
 
+// Whether hole dimensions are drawn on the board: a per-browser preference.
+const DIMS_KEY = "g2l.dims.v1";
+
+function loadShowDims() {
+  try {
+    return localStorage.getItem(DIMS_KEY) !== "0";
+  } catch {
+    return true;
+  }
+}
+
+function saveShowDims(on: boolean) {
+  try {
+    localStorage.setItem(DIMS_KEY, on ? "1" : "0");
+  } catch {
+    /* storage blocked: the preference just isn't remembered */
+  }
+}
+
 const stored = loadXcsOpts();
 /** False until the user has changed an XCS setting in this browser (then server defaults don't override). */
 export const hasStoredXcs = stored !== null;
@@ -88,6 +109,7 @@ export const state: State = {
   side2d: "top",
   pickMode: false,
   mounting: [],
+  showDims: loadShowDims(),
   xcsOpts: stored ?? structuredClone(XCS_DEFAULTS),
   xcs: null,
   xcsPending: false,
@@ -103,6 +125,7 @@ export function update(patch: Partial<State>) {
   const changed = new Set(Object.keys(patch) as (keyof State)[]);
   Object.assign(state, patch);
   if (changed.has("xcsOpts")) saveXcsOpts(state.xcsOpts);
+  if (changed.has("showDims")) saveShowDims(state.showDims);
   listeners.forEach((fn) => fn(state, changed));
 }
 

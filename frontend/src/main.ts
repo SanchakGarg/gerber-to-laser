@@ -3,11 +3,12 @@ import "@fontsource/space-mono/400.css";
 import "@fontsource/space-mono/700.css";
 import "./styles/riso.css";
 import { api, type BoardView, type HoleRef } from "./api";
+import { holePairs, pickedHoles } from "./measure";
 import { flash, stampIn } from "./motion";
 import { initExportDefaults, initSheet, renderMoreFormats, resetMoreFormats } from "./moreFormats";
 import { renderLayerList, renderNotes, renderTicket } from "./sidebar";
 import { defaultVisible, hasStoredXcs, sameHole, state, subscribe, update } from "./state";
-import { toast } from "./ui";
+import { fmtMm, toast } from "./ui";
 import { View2D } from "./view2d";
 import { View3D } from "./view3d";
 import { initXcsPanel, renderXcsPanel, scheduleXcs } from "./xcsPanel";
@@ -42,7 +43,7 @@ subscribe((s, changed) => {
   if (has("board", "error")) renderNotes();
   if (has("busy")) showBusy(s.busy);
   if (has("view")) showView(s.view);
-  if (has("pickMode", "mounting", "xcsOpts", "board")) syncPick();
+  if (has("pickMode", "mounting", "xcsOpts", "board", "showDims")) syncPick();
   if (has("board", "pickMode", "mounting", "downloaded")) renderSteps();
   renderXcsPanel(changed);
   if (has("exportOpts", "board", "config", "busy")) renderMoreFormats();
@@ -94,14 +95,18 @@ function syncPick() {
   const on = state.pickMode;
   document.body.classList.toggle("picking", on);
   view2d.setPickMode(on);
+  view2d.setShowDims(state.showDims);
   view2d.setMounting(state.mounting, state.xcsOpts.mounting_diameter);
   const btn = $<HTMLButtonElement>("pick-btn");
   btn.setAttribute("aria-pressed", String(on));
   btn.classList.toggle("active", on);
   btn.querySelector(".label")!.textContent = on ? "Done" : "Pick mounting holes";
   $("pick-pill").hidden = !on;
-  const n = state.mounting.length;
-  $("pick-count").textContent = n ? `${n} picked` : "none yet";
+  const holes = pickedHoles(state.board, state.mounting);
+  const pairs = holePairs(holes);
+  $("pick-count").textContent = !holes.length
+    ? "none yet"
+    : pairs.length === 1 ? `2 picked · ${fmtMm(pairs[0].dist)} mm apart` : `${holes.length} picked`;
 }
 
 $("pick-btn").addEventListener("click", () => setPickMode(!state.pickMode));

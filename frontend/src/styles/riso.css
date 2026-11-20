@@ -149,8 +149,11 @@ svg.icon { width: 16px; height: 16px; flex: none; }
 }
 .col { display: flex; flex-direction: column; gap: 20px; min-width: 0; }
 .col-main { align-self: stretch; }
-body.picking .col-left, body.picking .col-right { opacity: .6; filter: saturate(.55); }
-.col-left, .col-right { transition: opacity .35s, filter .35s; }
+/* picking: everything else fades back, but the Mounting holes block (its Done button, size, list) stays live */
+body.picking .col-left,
+body.picking .xcs > .card-head,
+body.picking .xcs-body > :not(.mount) { opacity: .6; filter: saturate(.55); }
+.col-left, .xcs > .card-head, .xcs-body > * { transition: opacity .35s, filter .35s; }
 
 .foot { text-align: center; color: var(--ink-3); font-size: 12px; padding: 4px 16px 28px; }
 
@@ -564,6 +567,21 @@ svg.board2d.dragging { cursor: grabbing; }
 .mark-jig { fill: rgba(162, 60, 240, .16); stroke: var(--mount); stroke-width: 1px; animation: markPop .45s var(--spring) both; }
 .mark-cross { fill: none; stroke: var(--mount); stroke-width: 1px; }
 
+/* dimensions: font-size and halo width are set inline in board units so they hold their screen size */
+.dim-lines, .dim-text { pointer-events: none; }
+.dim-line { stroke: var(--mount); stroke-width: 1.4px; stroke-dasharray: 6 4; fill: none; }
+.dim-text text {
+  font-family: var(--mono);
+  font-weight: 700;
+  fill: var(--ink);
+  stroke: var(--paper-3);
+  stroke-linejoin: round;
+  paint-order: stroke fill;
+  animation: fadeIn .25s var(--ease) both;
+}
+.dim-text .dim-sub { font-weight: 400; font-size: .9em; fill: var(--ink-2); }
+.dim-text .dim-num { fill: var(--mount); }
+
 .pick-pill {
   position: absolute;
   top: 12px;
@@ -708,6 +726,18 @@ svg.bed { display: block; width: 100%; height: 100%; }
 .block h3 { margin: 0; font-weight: 800; font-size: 15px; display: flex; align-items: center; gap: 7px; }
 .hint { margin: 4px 0 10px; font-size: 12px; color: var(--ink-2); }
 .row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; }
+
+/* mounting holes: dimensions toggle + measured list */
+.mdims-toggle { margin-top: 12px; }
+.mdims { margin-top: 10px; padding: 8px 10px; background: var(--paper-2); border: 1.5px solid var(--ink); border-radius: var(--r-s); font-size: 12.5px; }
+.mlist { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.mlist li { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.mlist-head { margin: 8px 0 4px; padding-top: 6px; border-top: 1.5px dashed rgba(29, 29, 27, .3); font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--ink-2); }
+.mnum { display: inline-grid; place-items: center; min-width: 20px; height: 20px; padding: 0 4px; border-radius: 999px; background: var(--mount); color: var(--paper-3); font: 700 11px/1 var(--mono); }
+.mpair { display: inline-flex; align-items: center; gap: 3px; }
+.mto { color: var(--ink-3); }
+.mdia, .mdist { font-family: var(--mono); font-weight: 700; white-space: nowrap; }
+.mxy { margin-left: auto; font: 400 11px/1.3 var(--mono); color: var(--ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 .offsets-grid { display: grid; grid-template-columns: minmax(0, 1fr) 96px; gap: 12px; align-items: center; }
 .offset-rows { display: flex; flex-direction: column; gap: 10px; min-width: 0; }

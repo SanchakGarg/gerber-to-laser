@@ -2,6 +2,7 @@
 // cut/etch offsets, mounting holes and the download links.
 import type { Side, XcsLayerSpec, XcsOpts } from "./api";
 import { api } from "./api";
+import { holePairs, pickedHoles } from "./measure";
 import { burst, flash, reducedMotion, stampIn } from "./motion";
 import { isHidden, setXcsOpts, state, update, type State } from "./state";
 import { fmtBytes, fmtMm, h, icon, svgEl, toast } from "./ui";
@@ -42,6 +43,8 @@ let mountCount: HTMLElement;
 let mountDiam: HTMLInputElement;
 let mountClear: HTMLButtonElement;
 let mountPick: HTMLButtonElement;
+let mountDimsToggle: HTMLInputElement;
+let mountList: HTMLElement;
 let tolInput: HTMLInputElement;
 let invertInput: HTMLInputElement;
 let statusEl: HTMLElement;
@@ -135,7 +138,10 @@ function build() {
   mountPick = h("button", { type: "button", class: "btn btn-pick", "aria-pressed": "false" }, icon("target"), "Pick holes");
   mountPick.addEventListener("click", () => onPickToggle());
   mountClear = h("button", { type: "button", class: "btn btn-ghost btn-small" }, "Clear");
-  mountClear.addEventListener("click", () => update({ mounting: [] }));
+  mountClear.addEventListener("click", () => {
+    update({ mounting: [] });
+    scheduleXcs();
+  });
   mountDiam = h("input", { type: "number", min: 0.5, max: 10, step: 0.1, inputmode: "decimal", "aria-label": "Jig hole diameter in mm" });
   mountDiam.addEventListener("change", () => {
     const v = parseFloat(mountDiam.value);
@@ -145,10 +151,16 @@ function build() {
     }
     mountDiam.value = String(state.xcsOpts.mounting_diameter);
   });
+  mountDimsToggle = h("input", { type: "checkbox" });
+  mountDimsToggle.addEventListener("change", () => update({ showDims: mountDimsToggle.checked }));
+  mountList = h("div", { class: "mdims", hidden: true });
   const mounting = h("section", { class: "block mount" },
     h("div", { class: "block-head" }, h("h3", {}, "Mounting holes ", mountCount), mountClear),
     h("p", { class: "hint" }, "Pick holes to get small jig holes at their centres, on their own layer, placed with the cut offset so the flipped back side lines up. Those holes still get cut at full size in the hole layers."),
     h("div", { class: "row" }, mountPick, h("label", { class: "inline-field" }, "Ø", mountDiam, "mm")),
+    h("label", { class: "check mdims-toggle" }, mountDimsToggle, h("span", { class: "box", "aria-hidden": "true" }),
+      "Dimensions on board", h("small", {}, "hole sizes, distances")),
+    mountList,
   );
 
   // options
@@ -305,7 +317,7 @@ export function renderXcsPanel(changed: Set<keyof State>) {
     syncOffsets();
     syncOptions();
   }
-  if (all || changed.has("xcsOpts") || changed.has("mounting") || changed.has("pickMode")) syncMounting();
+  if (all || ["xcsOpts", "mounting", "pickMode", "showDims", "board"].some((k) => changed.has(k as keyof State))) syncMounting();
   if (all || changed.has("xcs") || changed.has("xcsPending") || changed.has("xcsError") || changed.has("board")) {
     syncDownloads();
     syncStatus();
@@ -448,6 +460,36 @@ function syncMounting() {
   mountPick.classList.toggle("active", state.pickMode);
   mountPick.lastChild!.textContent = state.pickMode ? "Done picking" : "Pick holes";
   if (document.activeElement !== mountDiam) mountDiam.value = String(state.xcsOpts.mounting_diameter);
+  mountDimsToggle.checked = state.showDims;
+  renderMountList();
+}
+
+/** Each picked hole's drilled size and position, then the centre-to-centre distances (numbers match the board). */
+function renderMountList() {
+  const holes = pickedHoles(state.board, state.mounting);
+  mountList.hidden = !holes.length;
+  if (!holes.length) {
+    mountList.replaceChildren();
+    return;
+  }
+  const num = (n: number) => h("span", { class: "mnum" }, String(n));
+  const holeRows = holes.map((p) => h("li", {},
+    num(p.n),
+    h("span", { class: "mdia" }, `Ø ${fmtMm(p.d)} mm`),
+    h("span", { class: "mxy" }, `x ${fmtMm(p.x)} · y ${fmtMm(p.y)}`),
+  ));
+  const pairRows = holePairs(holes).map((p) => h("li", {},
+    h("span", { class: "mpair" }, num(p.a.n), h("span", { class: "mto", "aria-label": "to" }, "↔"), num(p.b.n)),
+    h("b", { class: "mdist" }, `${fmtMm(p.dist)} mm`),
+    h("span", { class: "mxy" }, `Δx ${fmtMm(Math.abs(p.dx))} · Δy ${fmtMm(Math.abs(p.dy))}`),
+  ));
+  mountList.replaceChildren(h("ol", { class: "mlist", "aria-label": "Picked holes" }, ...holeRows));
+  if (pairRows.length) {
+    mountList.append(
+      h("p", { class: "mlist-head" }, "Centre to centre"),
+      h("ul", { class: "mlist", "aria-label": "Centre-to-centre distances" }, ...pairRows),
+    );
+  }
 }
 
 function syncDownloads() {

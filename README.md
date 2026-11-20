@@ -11,6 +11,9 @@ same export rules, but works from Gerbers, so any EDA tool's output works (KiCad
 - **2D view**: all layers stacked, pan/zoom, top/bottom flip, cursor position in mm.
 - **3D view**: the board built from the layers (substrate, copper, mask, silkscreen, holes).
 - **Mounting holes**: click *Pick mounting holes*, the board fades and you click the holes your jig uses.
+  With *Dimensions on board* on, each picked hole is numbered and labelled with its drilled Ø, and the
+  centre-to-centre distances are drawn between them (every pair up to 4 holes, a chain after that). The panel
+  lists the same numbers with each hole's position and the Δx / Δy of each pair.
 - **Bake XCS**: a live preview of the front and back xTool projects on the laser bed, a show/hide toggle per
   layer, X/Y offsets for the cut and etch lasers, and download links for `front.xcs`, `back.xcs` or both as a zip.
 - **More formats**: the per-layer SVG (+PNG) zip, with mirroring and a preview of every file.
@@ -150,7 +153,8 @@ backend/app/
 frontend/src/
   main.ts        wiring, steps, pick mode
   sidebar.ts     board ticket, notes, Gerber layer list
-  view2d.ts      2D board view + mounting-hole picking
+  view2d.ts      2D board view + mounting-hole picking and dimensions
+  measure.ts     picked-hole sizes and centre-to-centre distances
   view3d.ts      3D board view (three.js)
   xcsPanel.ts    "Bake XCS": bed previews, layer toggles, offsets, downloads
   moreFormats.ts SVG/PNG zip export
