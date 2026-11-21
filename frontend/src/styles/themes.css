@@ -1,0 +1,168 @@
+/* Colour themes. Each one is a full ink set; `data-theme` sits on <html> (set before first paint by
+   the inline script in index.html) and on each swatch strip in the theme picker, so a strip shows
+   its own theme's inks. Keep the ids and names in sync with src/theme.ts.
+   --blend: how overlapping inks mix (multiply on paper, screen on dark grounds). */
+
+:root, [data-theme="riso"] {
+  --paper: #f4efe6; --paper-2: #ebe3d3; --paper-3: #fffaf0;
+  --ink: #1d1d1b; --ink-2: #4a4843; --ink-3: #8b867b;
+  --pink: #ff48b0; --blue: #0078bf; --yellow: #ffe800; --green: #00a95c; --orange: #ff6c2f; --purple: #765ba7;
+  --board: #e8dcc0;
+  --blend: multiply;
+  color-scheme: light;
+}
+
+[data-theme="newsprint"] {
+  --paper: #efede8; --paper-2: #e2dfd8; --paper-3: #fbfaf7;
+  --ink: #111111; --ink-2: #3d3d3d; --ink-3: #8a8a8a;
+  --pink: #e63946; --blue: #1d4ed8; --yellow: #ffd60a; --green: #2a9d8f; --orange: #f4a261; --purple: #6d597a;
+  --board: #dcd6c8;
+  --blend: multiply;
+  color-scheme: light;
+}
+
+[data-theme="mint"] {
+  --paper: #e8f5ef; --paper-2: #d6ece2; --paper-3: #f6fcf9;
+  --ink: #12332a; --ink-2: #3b5e53; --ink-3: #7f9c92;
+  --pink: #ff5d8f; --blue: #0089a8; --yellow: #f9e04b; --green: #1fab6e; --orange: #ff8a3d; --purple: #7c5cbf;
+  --board: #cfe6d4;
+  --blend: multiply;
+  color-scheme: light;
+}
+
+[data-theme="peach"] {
+  --paper: #fdeee4; --paper-2: #f7dccb; --paper-3: #fff8f3;
+  --ink: #2b1a17; --ink-2: #5c4038; --ink-3: #a3857b;
+  --pink: #ff3d7f; --blue: #3a5bd9; --yellow: #ffc93c; --green: #26a96c; --orange: #ff6b35; --purple: #8e44ad;
+  --board: #f1d6bf;
+  --blend: multiply;
+  color-scheme: light;
+}
+
+[data-theme="forest"] {
+  --paper: #ece9dc; --paper-2: #dfdbc8; --paper-3: #f8f6ee;
+  --ink: #1f2a1c; --ink-2: #455241; --ink-3: #8a9283;
+  --pink: #c8553d; --blue: #2b6777; --yellow: #f2c14e; --green: #3a7d44; --orange: #e07a2e; --purple: #6b4e71;
+  --board: #d8cfae;
+  --blend: multiply;
+  color-scheme: light;
+}
+
+[data-theme="lavender"] {
+  --paper: #f1ecf8; --paper-2: #e3daf1; --paper-3: #fbf9fe;
+  --ink: #241a36; --ink-2: #4f4363; --ink-3: #9488a8;
+  --pink: #ff4fa0; --blue: #4361ee; --yellow: #ffe45e; --green: #2bb673; --orange: #ff8c42; --purple: #7b2cbf;
+  --board: #e2d6ef;
+  --blend: multiply;
+  color-scheme: light;
+}
+
+[data-theme="blueprint"] {
+  --paper: #0f2a4a; --paper-2: #14365e; --paper-3: #1a4272;
+  --ink: #e8f1ff; --ink-2: #b5c9e6; --ink-3: #7d97bd;
+  --pink: #ff7eb6; --blue: #4cc9f0; --yellow: #ffe066; --green: #5be7a9; --orange: #ffa45b; --purple: #b39dff;
+  --board: #1e4f86;
+  --blend: screen;
+  color-scheme: dark;
+}
+
+[data-theme="midnight"] {
+  --paper: #16161d; --paper-2: #1f1f29; --paper-3: #262633;
+  --ink: #ecebf3; --ink-2: #b7b5c9; --ink-3: #7d7b93;
+  --pink: #ff4fa3; --blue: #3ea6ff; --yellow: #ffd93d; --green: #2ee59d; --orange: #ff7a45; --purple: #a78bfa;
+  --board: #2d2b3a;
+  --blend: screen;
+  color-scheme: dark;
+}
+
+[data-theme="terminal"] {
+  --paper: #0b0f0c; --paper-2: #121a14; --paper-3: #18231b;
+  --ink: #c8f7c5; --ink-2: #8fd18a; --ink-3: #5a8a57;
+  --pink: #ff5c8a; --blue: #39c5ff; --yellow: #f5e663; --green: #39ff88; --orange: #ffa34d; --purple: #b48cff;
+  --board: #1b2a1f;
+  --blend: screen;
+  color-scheme: dark;
+}
+
+[data-theme="ember"] {
+  --paper: #1c1410; --paper-2: #261b15; --paper-3: #30221a;
+  --ink: #f8e9dc; --ink-2: #d1b9a6; --ink-3: #957a66;
+  --pink: #ff5a7a; --blue: #4fb3ff; --yellow: #ffcc33; --green: #5ed39a; --orange: #ff7a1a; --purple: #c792ea;
+  --board: #3a2a20;
+  --blend: screen;
+  color-scheme: dark;
+}
+
+/* Dark themes: anything printed on a yellow ink keeps dark text and lines, or it can't be read. */
+:is([data-theme="blueprint"], [data-theme="midnight"], [data-theme="terminal"], [data-theme="ember"])
+  :is(mark, .sticker, .stepchip.current, .btn-primary, .busy-msg, .bed-zoom-btn[aria-pressed="true"],
+      .stepper .step:hover, .dl-zip, .dl-svg, .theme-opt.active) {
+  --ink: #17130f;
+  --ink-2: #3a332c;
+  --ink-3: #5f574d;
+  --paper: #f4efe6;
+  --paper-3: #fffaf0;
+  color: var(--ink);
+}
+:is([data-theme="blueprint"], [data-theme="midnight"], [data-theme="terminal"], [data-theme="ember"]) mark {
+  background: var(--yellow);
+  border-radius: 3px;
+}
+
+/* ---------- picker ---------- */
+
+.masthead { position: relative; }
+.theme-pick { position: relative; margin-left: auto; }
+.theme-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 10px 5px 8px;
+  border: 2px solid var(--ink);
+  border-radius: 999px;
+  background: var(--paper-3);
+  font-weight: 600;
+  font-size: 13px;
+  transition: transform .2s var(--spring);
+}
+.theme-btn:hover { transform: translateY(-1px) rotate(-1deg); }
+.theme-btn .caret { font-size: 10px; transition: transform .2s var(--ease); }
+.theme-btn[aria-expanded="true"] .caret { transform: rotate(180deg); }
+
+.tswatch { display: inline-flex; gap: 2px; flex: none; background: none; }
+.tswatch i { width: 10px; height: 10px; border-radius: 2px; border: 1px solid rgba(0, 0, 0, .35); }
+
+.theme-menu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 6px);
+  z-index: 2000;
+  min-width: 250px;
+  margin: 0;
+  padding: 6px;
+  list-style: none;
+  border: 2px solid var(--ink);
+  border-radius: 14px;
+  background: var(--paper-3);
+  box-shadow: 4px 5px 0 color-mix(in srgb, var(--ink) 18%, transparent);
+  animation: fadeIn .15s both;
+}
+.theme-opt {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 7px 10px;
+  border-radius: 9px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.theme-opt.active { background: color-mix(in srgb, var(--yellow) 35%, transparent); }
+.theme-opt[aria-selected="true"]::before { content: "✓"; margin-right: -4px; font-size: 12px; }
+.theme-opt .tname { flex: 1; }
+
+@media (max-width: 819px) {
+  .theme-pick { position: absolute; top: 14px; right: 16px; }
+  .theme-btn .tlabel { display: none; }
+}

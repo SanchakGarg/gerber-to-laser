@@ -62,7 +62,14 @@ export class View3D {
     return true;
   }
 
-  setBoard(board: BoardView | null) {
+  /** Rebuilds the materials in the current theme's inks, keeping the camera. */
+  restyle() {
+    this.scene.background = new THREE.Color(ink.paper);
+    if (this.board) this.setBoard(this.board, true);
+    else this.render();
+  }
+
+  setBoard(board: BoardView | null, keepCamera = false) {
     this.board = board;
     this.clear();
     this.host.querySelector(".empty")?.toggleAttribute("hidden", !!board);
@@ -137,7 +144,8 @@ export class View3D {
     this.coats.back = slab(board.board.coats.back, -t / 2 - CU - 0.002 - MASK, MASK, toon(ink.orange, 0.45));
 
     this.refreshVisibility();
-    this.setCamera("iso");
+    if (keepCamera) this.render();
+    else this.setCamera("iso");
   }
 
   private edgesOf(group: THREE.Group, z: number) {

@@ -5,6 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="theme-color" content="#f4efe6" />
     <title>Gerber to Laser</title>
+    <script>
+      // apply the saved theme before first paint (see src/theme.ts)
+      try {
+        var t = localStorage.getItem("g2l.theme");
+        if (t) document.documentElement.dataset.theme = t;
+      } catch (e) {}
+    </script>
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cg style='mix-blend-mode:multiply'%3E%3Ccircle cx='13' cy='13' r='10' fill='%23ff48b0'/%3E%3Ccircle cx='19' cy='15' r='10' fill='%230078bf' opacity='.85'/%3E%3Ccircle cx='15' cy='20' r='9' fill='%23ffe800' opacity='.9'/%3E%3C/g%3E%3Cpath d='M6 26 26 6' stroke='%231d1d1b' stroke-width='2.4' stroke-linecap='round'/%3E%3C/svg%3E" />
   </head>
   <body>

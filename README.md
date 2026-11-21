@@ -8,6 +8,8 @@ same export rules, but works from Gerbers, so any EDA tool's output works (KiCad
 
 - Upload a `.zip`, a folder, or the loose files (drill file included).
 - **Layers**: every detected layer, with show/hide (per layer or per side) and a dropdown to fix a wrongly guessed layer type.
+- **Themes**: a dropdown in the top-right corner switches between 10 colour themes (6 light, 4 dark), each
+  shown with its palette as tiny swatches. The choice is saved in the browser and comes back on reload.
 - **2D view**: all layers stacked, pan/zoom, top/bottom flip, cursor position in mm.
 - **3D view**: the board built from the layers (substrate, copper, mask, silkscreen, holes).
 - **Mounting holes**: click *Pick mounting holes*, the board fades and you click the holes your jig uses.

@@ -1,5 +1,6 @@
 // Risograph inks — spot colours that overprint (the 2D view multiplies them like real ink).
-// Mirrored as CSS custom properties in styles/riso.css.
+// The values come from the active theme's CSS custom properties (styles/themes.css):
+// readInk() refreshes them after the theme changes. The defaults are the "riso" theme.
 export const ink = {
   paper: "#f4efe6",
   paper2: "#ebe3d3",
@@ -17,26 +18,42 @@ export const ink = {
   mount: "#a23cf0",
 };
 
+const CSS_VAR: Record<keyof typeof ink, string> = {
+  paper: "--paper", paper2: "--paper-2", paper3: "--paper-3",
+  ink: "--ink", ink2: "--ink-2", ink3: "--ink-3",
+  pink: "--pink", blue: "--blue", yellow: "--yellow", green: "--green", orange: "--orange", purple: "--purple",
+  board: "--board", mount: "--mount",
+};
+
+export function readInk() {
+  const cs = getComputedStyle(document.documentElement);
+  for (const k of Object.keys(CSS_VAR) as (keyof typeof ink)[]) {
+    const v = cs.getPropertyValue(CSS_VAR[k]).trim();
+    if (v) ink[k] = v;
+  }
+}
+
 export interface LayerStyle {
   color: string;
   opacity: number;
 }
 
-export const ROLE_STYLE: Record<string, LayerStyle> = {
-  top_copper: { color: ink.blue, opacity: 0.9 },
-  bottom_copper: { color: ink.pink, opacity: 0.85 },
-  top_silk: { color: ink.ink, opacity: 0.9 },
-  bottom_silk: { color: ink.ink2, opacity: 0.85 },
-  top_mask: { color: ink.green, opacity: 0.55 },
-  bottom_mask: { color: ink.orange, opacity: 0.55 },
-  top_paste: { color: ink.yellow, opacity: 0.9 },
-  bottom_paste: { color: ink.yellow, opacity: 0.7 },
-  inner_copper: { color: ink.purple, opacity: 0.6 },
-  outline: { color: ink.ink, opacity: 1 },
-  drill: { color: ink.ink, opacity: 1 },
-  other: { color: ink.ink3, opacity: 0.5 },
+const ROLE_INK: Record<string, [keyof typeof ink, number]> = {
+  top_copper: ["blue", 0.9],
+  bottom_copper: ["pink", 0.85],
+  top_silk: ["ink", 0.9],
+  bottom_silk: ["ink2", 0.85],
+  top_mask: ["green", 0.55],
+  bottom_mask: ["orange", 0.55],
+  top_paste: ["yellow", 0.9],
+  bottom_paste: ["yellow", 0.7],
+  inner_copper: ["purple", 0.6],
+  outline: ["ink", 1],
+  drill: ["ink", 1],
+  other: ["ink3", 0.5],
 };
 
 export function styleFor(role: string): LayerStyle {
-  return ROLE_STYLE[role] ?? ROLE_STYLE.other;
+  const [key, opacity] = ROLE_INK[role] ?? ROLE_INK.other;
+  return { color: ink[key], opacity };
 }

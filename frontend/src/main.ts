@@ -2,6 +2,7 @@ import "@fontsource-variable/bricolage-grotesque/opsz.css";
 import "@fontsource/space-mono/400.css";
 import "@fontsource/space-mono/700.css";
 import "./styles/riso.css";
+import "./styles/themes.css";
 import { api, type BoardView, type HoleRef } from "./api";
 import { holePairs, pickedHoles } from "./measure";
 import { flash, stampIn } from "./motion";
@@ -9,18 +10,25 @@ import { initExportDefaults, initSheet, renderMoreFormats, resetMoreFormats } fr
 import { renderLayerList, renderNotes, renderTicket } from "./sidebar";
 import { defaultVisible, hasStoredXcs, sameHole, state, subscribe, update } from "./state";
 import { fmtMm, toast } from "./ui";
+import { initThemePicker, onThemeChange } from "./theme";
 import { View2D } from "./view2d";
 import { View3D } from "./view3d";
 import { initXcsPanel, renderXcsPanel, scheduleXcs } from "./xcsPanel";
 
 const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
 
+initThemePicker(document.querySelector<HTMLElement>(".masthead")!);
 const view2d = new View2D($("view2d"), $("readout"));
 const view3d = new View3D($("view3d"));
 view2d.onPick = togglePick;
 // The 3D canvas has no size while its tab is hidden: frame the camera again the first time it shows.
 let fresh3d = true;
 initXcsPanel($("xcs-card"), () => setPickMode(!state.pickMode));
+onThemeChange(() => {
+  view2d.restyle();
+  view3d.restyle();
+  if (state.board) renderLayerList(changeRole);
+});
 
 // ---------- state → UI ----------
 

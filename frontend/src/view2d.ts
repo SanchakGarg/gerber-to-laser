@@ -88,6 +88,15 @@ export class View2D {
     this.drawDims();
   }
 
+  /** Re-reads the layer colours after a theme change, keeping pan/zoom. */
+  restyle() {
+    if (!this.svg || !this.board) return;
+    this.svg.querySelector(".substrate")?.setAttribute("fill", ink.board);
+    for (const l of this.board.layers) {
+      this.groups.get(l.id)?.querySelector("path.art")?.setAttribute("fill", styleFor(l.role).color);
+    }
+  }
+
   private layerGroup(l: LayerView) {
     const st = styleFor(l.role);
     const g = svgEl("g", { class: `layer role-${l.role}`, "data-role": l.role });
@@ -110,7 +119,7 @@ export class View2D {
         "vector-effect": "non-scaling-stroke", "stroke-linejoin": "round",
       }));
     } else if (l.d) {
-      g.append(svgEl("path", { d: l.d, fill: st.color, "fill-rule": "evenodd", opacity: st.opacity }));
+      g.append(svgEl("path", { class: "art", d: l.d, fill: st.color, "fill-rule": "evenodd", opacity: st.opacity }));
     }
     return g;
   }
