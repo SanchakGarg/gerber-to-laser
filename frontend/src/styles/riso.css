@@ -562,9 +562,8 @@ svg.board2d.dragging { cursor: grabbing; }
 .board2d.picking .hole.hover { fill: var(--yellow); stroke-width: 2.6px; }
 .board2d .hole.picked { fill: var(--pink); }
 .board2d.picking .hole.picked { animation: holePulse 1.4s ease-in-out infinite; }
-.mark-ring, .mark-jig { transform-box: fill-box; transform-origin: center; }
+.mark-ring { transform-box: fill-box; transform-origin: center; }
 .mark-ring { fill: none; stroke: var(--mount); stroke-width: 2px; stroke-dasharray: 5 4; animation: markPop .45s var(--spring) both, ants 1.2s linear infinite; }
-.mark-jig { fill: rgba(162, 60, 240, .16); stroke: var(--mount); stroke-width: 1px; animation: markPop .45s var(--spring) both; }
 .mark-cross { fill: none; stroke: var(--mount); stroke-width: 1px; }
 
 /* dimensions: font-size and halo width are set inline in board units so they hold their screen size */

@@ -52,7 +52,6 @@ export interface AppConfig {
   xcs: {
     bed: { w: number; h: number };
     layers: XcsLayerSpec[];
-    mounting_hole_mm: number;
     max_offset_mm: number;
   };
 }
@@ -77,7 +76,6 @@ export interface HoleRef {
 export interface XcsOpts {
   hidden: Record<Side, string[]>;
   offsets: { cut: [number, number]; etch: [number, number] };
-  mounting_diameter: number;
   hole_tolerance: number;
   invert_copper: boolean;
 }

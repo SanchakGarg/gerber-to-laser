@@ -96,7 +96,7 @@ function syncPick() {
   document.body.classList.toggle("picking", on);
   view2d.setPickMode(on);
   view2d.setShowDims(state.showDims);
-  view2d.setMounting(state.mounting, state.xcsOpts.mounting_diameter);
+  view2d.setMounting(state.mounting);
   const btn = $<HTMLButtonElement>("pick-btn");
   btn.setAttribute("aria-pressed", String(on));
   btn.classList.toggle("active", on);
@@ -306,7 +306,7 @@ api
     $("max-mb").textContent = String(config.max_upload_mb);
     if (!hasStoredXcs) {
       // server defaults, not saved: only the user's own changes are remembered
-      state.xcsOpts = { ...state.xcsOpts, hole_tolerance: config.defaults.hole_tolerance_mm, mounting_diameter: config.xcs.mounting_hole_mm };
+      state.xcsOpts = { ...state.xcsOpts, hole_tolerance: config.defaults.hole_tolerance_mm };
     }
     update({ config });
     initExportDefaults();

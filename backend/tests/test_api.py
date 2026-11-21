@@ -65,7 +65,7 @@ def _upload(board_dir):
 
 def test_config_lists_xcs_layers():
     cfg = client.get("/api/config").json()["xcs"]
-    assert cfg["bed"] == {"w": 220, "h": 220} and cfg["mounting_hole_mm"] == 2
+    assert cfg["bed"] == {"w": 220, "h": 220}
     assert [l["key"] for l in cfg["layers"]][-1] == "outline_cut"
 
 

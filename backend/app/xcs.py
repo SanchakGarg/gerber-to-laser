@@ -14,18 +14,19 @@ Layers per side (each its own colour, all in one file):
 
 | key          | process              | offset group | geometry                                          |
 |--------------|----------------------|--------------|---------------------------------------------------|
-| mounting     | cut                  | cut          | jig holes (default 2 mm) at the picked holes      |
+| mounting     | cut                  | cut          | the picked holes, real size (after tolerance)     |
 | copper       | fill engrave         | etch         | outline − copper (or copper ∩ outline, inverted)  |
 | silk         | fill engrave         | etch         | silkscreen ∩ outline                              |
 | mask         | fill engrave         | etch         | solder-mask openings ∩ outline                    |
-| hole_engrave | fill engrave         | etch         | every hole/slot, filled (after hole tolerance)    |
-| hole_cut     | cut                  | cut          | every hole/slot outline (after hole tolerance)    |
+| hole_engrave | fill engrave         | etch         | every other hole/slot, filled (after tolerance)   |
+| hole_cut     | cut                  | cut          | every other hole/slot outline (after tolerance)   |
 | outline_cut  | cut                  | cut          | board outline rings, inner cut-outs included      |
 
 The board's bbox is centred on the laser bed; the back side is mirrored (DEFAULT_MIRROR_BACK).
 Cut and etch layers each get their own X/Y offset, because the two lasers do not line up exactly.
-Mounting holes follow the cut offset: they are cut, and the board flips about their centre line, so
-they must share the frame of the hole/outline cuts or the back side lands 2x(etch - cut) away.
+Picked mounting holes move out of the hole layers into their own layer, cut at their drilled size.
+They follow the cut offset: the board flips about their centre line, so they must share the frame of
+the hole/outline cuts or the back side lands 2x(etch - cut) away.
 """
 import copy
 import io
@@ -34,6 +35,7 @@ import math
 import time
 import uuid
 import zipfile
+from collections import Counter
 from dataclasses import dataclass, field
 from functools import lru_cache
 
@@ -49,7 +51,6 @@ FILL = "FILL_VECTOR_ENGRAVING"
 SIDES = ("front", "back")
 GROUPS = ("cut", "etch")
 MAX_OFFSET_MM = 10.0
-MOUNTING_RANGE_MM = (0.5, 10.0)
 UA = "gerber-to-laser"
 # 1x1 transparent PNG; xTool only uses `cover` as the thumbnail in its file browser.
 COVER = ("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGNgYGBgAAAABQAB"
@@ -104,7 +105,6 @@ class XcsOptions:
     hidden: dict = field(default_factory=lambda: {s: frozenset() for s in SIDES})
     offsets: dict = field(default_factory=lambda: {g: (0.0, 0.0) for g in GROUPS})
     mounting: tuple = ()            # ((layer_id, hole_index), ...)
-    mounting_diameter: float = field(default_factory=lambda: settings.mounting_hole_mm)
     hole_tolerance: float = field(default_factory=lambda: settings.hole_tolerance_mm)
     invert_copper: bool = False
 
@@ -130,23 +130,17 @@ class XcsOptions:
                 raise ValueError("Mounting holes must be given as {layer_id, index}.")
             mounting.append((str(ref["layer_id"]), int(ref["index"])))
 
-        md = d.get("mounting_diameter")
-        md = settings.mounting_hole_mm if md is None or md == "" else float(md)
-        lo, hi = MOUNTING_RANGE_MM
-        if not lo <= md <= hi:
-            raise ValueError(f"Mounting hole diameter must be between {lo:g} and {hi:g} mm.")
-
         tol = d.get("hole_tolerance")
         tol = settings.hole_tolerance_mm if tol is None or tol == "" else float(tol)
         if not -MAX_HOLE_TOLERANCE_MM <= tol <= MAX_HOLE_TOLERANCE_MM:
             raise ValueError(f"Hole tolerance must be between -{MAX_HOLE_TOLERANCE_MM} and {MAX_HOLE_TOLERANCE_MM} mm.")
 
         return cls(sides=sides, hidden=hidden, offsets=offsets, mounting=tuple(dict.fromkeys(mounting)),
-                   mounting_diameter=md, hole_tolerance=tol, invert_copper=bool(d.get("invert_copper", False)))
+                   hole_tolerance=tol, invert_copper=bool(d.get("invert_copper", False)))
 
 
-def mounting_points(board: Board, refs):
-    """Gerber-coordinate centres of the picked holes. Raises ValueError for an unknown hole."""
+def mounting_holes(board: Board, refs):
+    """(x, y, d) in Gerber coordinates of each picked hole. Raises ValueError for an unknown hole."""
     pts = []
     for layer_id, index in refs:
         try:
@@ -156,8 +150,7 @@ def mounting_points(board: Board, refs):
         holes = lyr.drills.holes if lyr.drills else []
         if not 0 <= index < len(holes):
             raise ValueError(f"Mounting hole {index} does not exist in {lyr.filename}.")
-        x, y, _ = holes[index]
-        pts.append((x, y))
+        pts.append(tuple(holes[index]))
     return pts
 
 
@@ -206,7 +199,7 @@ def side_layers(board: Board, side: str, opts: XcsOptions):
     Cached on the board: offsets and hidden layers don't change geometry, so nudging an offset
     doesn't redo the copper boolean ops.
     """
-    key = ("xcs", side, opts.invert_copper, opts.hole_tolerance, opts.mounting, opts.mounting_diameter)
+    key = ("xcs", side, opts.invert_copper, opts.hole_tolerance, opts.mounting)
     if key not in board.cache:
         if len(board.cache) > 16:
             board.cache.clear()
@@ -220,10 +213,11 @@ def _side_layers(board: Board, side: str, opts: XcsOptions):
     tol = opts.hole_tolerance
     out = {}
 
-    pts = mounting_points(board, opts.mounting)
-    if pts:
-        r = opts.mounting_diameter / 2
-        out["mounting"] = [Shape(circle=(*pl.pt(x, y), r)) for x, y in pts]
+    # picked holes are cut on the mounting layer instead of the hole layers
+    picked = mounting_holes(board, opts.mounting)
+    if picked:
+        out["mounting"] = [Shape(circle=(*pl.pt(x, y), shrink_size(d, tol) / 2)) for x, y, d in picked if d > 0]
+    skip = Counter(picked)
 
     for kind in ("copper", "silk", "mask"):
         if art[kind] is not None:
@@ -233,6 +227,9 @@ def _side_layers(board: Board, side: str, opts: XcsOptions):
 
     holes = []
     for x, y, d in board.drills.holes:
+        if skip[(x, y, d)] > 0:
+            skip[(x, y, d)] -= 1
+            continue
         if d > 0:
             holes.append(Shape(circle=(*pl.pt(x, y), shrink_size(d, tol) / 2)))
     for x1, y1, x2, y2, w in board.drills.slots:
@@ -348,7 +345,7 @@ def build_xcs(board: Board, side: str, opts: XcsOptions):
             continue
         dx, dy = opts.offsets[spec.group]
         tag = f"g-{uuid.uuid4()}"
-        name = spec.name if spec.key != "mounting" else f"Mounting holes · {opts.mounting_diameter:g} mm"
+        name = spec.name
         layer_data[spec.color] = {"name": name, "order": order, "visible": True}
         entry = _process_entry(spec)
         for shape in shapes:

@@ -25,13 +25,12 @@ type Listener = (s: State, changed: Set<keyof State>) => void;
 
 const listeners: Listener[] = [];
 
-// Offsets, jig-hole size and hidden layers are machine calibration: remember them per browser.
+// Offsets, hole tolerance and hidden layers are machine calibration: remember them per browser.
 const XCS_KEY = "g2l.xcs.v1";
 
 const XCS_DEFAULTS: XcsOpts = {
   hidden: { front: [], back: [] },
   offsets: { cut: [0, 0], etch: [0, 0] },
-  mounting_diameter: 2,
   hole_tolerance: 0.2,
   invert_copper: false,
 };
@@ -49,7 +48,6 @@ function loadXcsOpts(): XcsOpts | null {
     return {
       hidden: { front: keys(o?.hidden?.front), back: keys(o?.hidden?.back) },
       offsets: { cut: pair(o?.offsets?.cut), etch: pair(o?.offsets?.etch) },
-      mounting_diameter: num(o?.mounting_diameter, XCS_DEFAULTS.mounting_diameter),
       hole_tolerance: num(o?.hole_tolerance, XCS_DEFAULTS.hole_tolerance),
       invert_copper: !!o?.invert_copper,
     };

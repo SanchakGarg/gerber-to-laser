@@ -46,7 +46,6 @@ Open http://localhost:8000 (or whatever `PORT` you set).
 | `DEFAULT_MIRROR_FRONT` / `DEFAULT_MIRROR_BACK` | `false` / `true` | Initial mirror checkboxes |
 | `HOLE_TOLERANCE_MM` | `0.2` | Initial hole tolerance: drill holes/slots are cut this much smaller in diameter (negative = larger) |
 | `XCS_BED_WIDTH_MM` / `XCS_BED_HEIGHT_MM` | `220` / `220` | Laser work area; the board is centred on it (xTool F2 Ultra) |
-| `MOUNTING_HOLE_MM` | `2.0` | Initial diameter of the jig holes in the *Mounting holes* layer |
 | `XCS_PRESETS` | *(empty)* | Path to a laser presets file; empty = `backend/app/xcs_presets.json` |
 
 ## xTool `.xcs` export
@@ -57,21 +56,22 @@ worked on after flipping the board. Every job is its own layer, with its own col
 
 | Layer | Colour | Process | Offset | Content |
 |---|---|---|---|---|
-| Mounting holes | `#A23CF0` | cut | cut | a 2 mm hole (configurable) centred on each hole you picked, for drilling your jig |
+| Mounting holes | `#A23CF0` | cut | cut | the holes you picked, at their drilled size (shrunk by the hole tolerance) |
 | Copper · engrave | `#000000` | fill engrave | etch | board outline − copper (negative; **Invert copper** burns the traces instead) |
 | Silkscreen · etch | `#2E6BFF` | fill engrave | etch | silkscreen ∩ outline |
 | Solder mask · etch | `#19A974` | fill engrave | etch | solder-mask openings ∩ outline |
-| Holes · engrave | `#E1C000` | fill engrave | etch | every hole/slot, filled, shrunk by the hole tolerance |
-| Holes · cut | `#FF7F56` | cut | cut | every hole/slot outline, shrunk by the hole tolerance |
+| Holes · engrave | `#E1C000` | fill engrave | etch | every hole/slot not picked as a mounting hole, filled, shrunk by the hole tolerance |
+| Holes · cut | `#FF7F56` | cut | cut | every hole/slot outline not picked as a mounting hole, shrunk by the hole tolerance |
 | Board outline · cut | `#FE0002` | cut | cut | the outline, with inner cut-outs as their own paths |
 
 - **Show/hide**: a hidden layer is left out of that side's file completely.
 - **Offsets**: the cut laser and the etch laser rarely land on exactly the same spot. *Cut* moves the cut
   layers and *Etch* moves the engrave/etch layers (±10 mm, 0.05 mm steps). The mounting holes follow the cut
   offset: the board flips about their centre line, so they must line up with the cut holes, or the back
-  side lands 2 × (etch − cut) away from the front. Offsets, the jig-hole size and hidden layers are remembered
+  side lands 2 × (etch − cut) away from the front. Offsets, the hole tolerance and hidden layers are remembered
   in the browser.
-- **Mounting holes** are extra. The picked holes still get cut at their real size in the hole layers.
+- **Mounting holes** are moved, not added: each picked hole goes to the *Mounting holes* layer at its real
+  size and is left out of *Holes · engrave* and *Holes · cut*, so it is never cut twice.
 - **Laser settings** (power, speed, passes, light source) come from
   [`backend/app/xcs_presets.json`](backend/app/xcs_presets.json). They were copied from an xTool Studio
   project for the F2 Ultra. Silkscreen and mask have no measured values yet, so treat them as starting

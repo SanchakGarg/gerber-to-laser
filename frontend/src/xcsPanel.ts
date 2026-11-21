@@ -40,7 +40,6 @@ const dl = {} as Record<DlKind, HTMLAnchorElement>;
 const offsetInputs = {} as Record<Group, [HTMLInputElement, HTMLInputElement]>;
 const regMarks = {} as Record<Group, SVGGElement>;
 let mountCount: HTMLElement;
-let mountDiam: HTMLInputElement;
 let mountClear: HTMLButtonElement;
 let mountPick: HTMLButtonElement;
 let mountDimsToggle: HTMLInputElement;
@@ -142,22 +141,13 @@ function build() {
     update({ mounting: [] });
     scheduleXcs();
   });
-  mountDiam = h("input", { type: "number", min: 0.5, max: 10, step: 0.1, inputmode: "decimal", "aria-label": "Jig hole diameter in mm" });
-  mountDiam.addEventListener("change", () => {
-    const v = parseFloat(mountDiam.value);
-    if (Number.isFinite(v)) {
-      setXcsOpts({ mounting_diameter: clamp(Math.round(v * 100) / 100, 0.5, 10) });
-      scheduleXcs();
-    }
-    mountDiam.value = String(state.xcsOpts.mounting_diameter);
-  });
   mountDimsToggle = h("input", { type: "checkbox" });
   mountDimsToggle.addEventListener("change", () => update({ showDims: mountDimsToggle.checked }));
   mountList = h("div", { class: "mdims", hidden: true });
   const mounting = h("section", { class: "block mount" },
     h("div", { class: "block-head" }, h("h3", {}, "Mounting holes ", mountCount), mountClear),
-    h("p", { class: "hint" }, "Pick holes to get small jig holes at their centres, on their own layer, placed with the cut offset so the flipped back side lines up. Those holes still get cut at full size in the hole layers."),
-    h("div", { class: "row" }, mountPick, h("label", { class: "inline-field" }, "Ø", mountDiam, "mm")),
+    h("p", { class: "hint" }, "Picked holes move to their own layer: cut at their real size, placed with the cut offset so the flipped back side lines up, and left out of the hole engrave and cut layers."),
+    h("div", { class: "row" }, mountPick),
     h("label", { class: "check mdims-toggle" }, mountDimsToggle, h("span", { class: "box", "aria-hidden": "true" }),
       "Dimensions on board", h("small", {}, "hole sizes, distances")),
     mountList,
@@ -365,13 +355,13 @@ function drawBeds(fresh: boolean) {
       if (!sp) continue;
       // the stamp already says cut / engrave / etch: show the short name ("Copper · engrave" → "Copper")
       const short = sp.name.split(" · ")[0];
-      const name = l.key === "mounting" ? `Jig holes Ø${state.xcsOpts.mounting_diameter}` : short;
+      const name = short;
       const eye = h("button", { type: "button", class: "eye", "data-key": l.key });
       eye.addEventListener("click", () => toggleHidden(side, l.key));
       const row = h("li", { class: "xrow", "data-key": l.key },
         eye,
         h("span", { class: "chip", "aria-hidden": "true" }),
-        h("span", { class: "xname", title: l.key === "mounting" ? `${sp.name} · Ø${state.xcsOpts.mounting_diameter} mm` : sp.name }, name),
+        h("span", { class: "xname", title: sp.name }, name),
         h("span", { class: `stamp stamp-${sp.process}` }, stampLabel(sp)),
         h("span", { class: "count", title: `${l.count} shape${l.count === 1 ? "" : "s"}` }, `×${l.count}`),
       );
@@ -459,7 +449,6 @@ function syncMounting() {
   mountPick.setAttribute("aria-pressed", String(state.pickMode));
   mountPick.classList.toggle("active", state.pickMode);
   mountPick.lastChild!.textContent = state.pickMode ? "Done picking" : "Pick holes";
-  if (document.activeElement !== mountDiam) mountDiam.value = String(state.xcsOpts.mounting_diameter);
   mountDimsToggle.checked = state.showDims;
   renderMountList();
 }

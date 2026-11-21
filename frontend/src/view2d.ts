@@ -48,7 +48,6 @@ export class View2D {
   private picking = false;
   private hover: Hole | null = null;
   private mounting: HoleRef[] = [];
-  private mountD = 2;
   private showDims = true;
 
   constructor(host: HTMLElement, readout: HTMLElement) {
@@ -148,9 +147,8 @@ export class View2D {
     if (!on) this.setHover(null);
   }
 
-  setMounting(refs: HoleRef[], diameter: number) {
+  setMounting(refs: HoleRef[]) {
     this.mounting = refs;
-    this.mountD = diameter;
     this.drawMounting();
     this.drawDims();
   }
@@ -204,7 +202,7 @@ export class View2D {
     }
     for (const hole of holes) {
       // just outside the mark's ring, up and to the right (on screen)
-      const r = Math.max(this.mountD / 2, hole.d / 2 + 0.15) * 0.75;
+      const r = (hole.d / 2 + 0.15) * 0.75;
       const t = text("dim-hole", sx(hole.x) + r, hole.y - r, { dx: "0.3em", dy: "-0.25em" }, "");
       const num = svgEl("tspan", { class: "dim-num" });
       num.textContent = `#${hole.n}`;
@@ -226,12 +224,7 @@ export class View2D {
   private drawMounting() {
     if (!this.mountG) return;
     const picked = new Set(this.mounting.map((r) => `${r.layer_id}:${r.index}`));
-    // keep existing marks (so only new ones pop in); redraw all if the jig size changed
-    const sizeKey = String(this.mountD);
-    if (this.mountG.dataset.d !== sizeKey) {
-      this.mountG.replaceChildren();
-      this.mountG.dataset.d = sizeKey;
-    }
+    // keep existing marks, so only new ones pop in
     const existing = new Map([...this.mountG.children].map((m) => [(m as SVGGElement).dataset.key!, m]));
     for (const hole of this.holes) {
       const key = `${hole.ref.layer_id}:${hole.ref.index}`;
@@ -243,14 +236,12 @@ export class View2D {
         continue;
       }
       if (mark) continue;
-      // registration mark: jig-hole circle + crosshair, centred on the hole
-      const r = this.mountD / 2;
-      const arm = Math.max(r, hole.d / 2) * 1.7;
+      // registration mark: ring + crosshair, centred on the hole
+      const arm = (hole.d / 2) * 1.7;
       const g = svgEl("g", { class: "mark", transform: `translate(${hole.x} ${hole.y})` });
       g.dataset.key = key;
       g.append(
-        svgEl("circle", { class: "mark-ring", r: Math.max(r, hole.d / 2 + 0.15), "vector-effect": "non-scaling-stroke" }),
-        svgEl("circle", { class: "mark-jig", r, "vector-effect": "non-scaling-stroke" }),
+        svgEl("circle", { class: "mark-ring", r: hole.d / 2 + 0.15, "vector-effect": "non-scaling-stroke" }),
         svgEl("path", { class: "mark-cross", d: `M ${-arm} 0 H ${arm} M 0 ${-arm} V ${arm}`, "vector-effect": "non-scaling-stroke" }),
       );
       this.mountG.append(g);

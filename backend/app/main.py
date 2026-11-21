@@ -61,7 +61,6 @@ def config():
         "xcs": {
             "bed": {"w": settings.xcs_bed_width_mm, "h": settings.xcs_bed_height_mm},
             "layers": xcs.layer_table(),
-            "mounting_hole_mm": settings.mounting_hole_mm,
             "max_offset_mm": xcs.MAX_OFFSET_MM,
         },
     }

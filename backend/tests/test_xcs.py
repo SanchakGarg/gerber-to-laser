@@ -155,23 +155,34 @@ def test_all_hidden_side_is_skipped(board):
 
 def test_mounting_layer(board2):
     drl = drill_layer(board2)
-    o = opts(mounting=[{"layer_id": drl.id, "index": 1}], offsets={"etch": [0.3, 0.4], "cut": [9, 9]})
+    o = opts(mounting=[{"layer_id": drl.id, "index": 1}], offsets={"etch": [0.3, 0.4], "cut": [9, 9]},
+             hole_tolerance=0)
     for side, cx in (("front", 107), ("back", 113)):
         layers = by_layer(build_xcs(board2, side, o))
         mount = layers[color("mounting")]
         assert len(mount) == 1
-        assert mount[0]["width"] == pytest.approx(2.0) and not mount[0]["isFill"]
+        # the picked hole itself, at its drilled size
+        assert mount[0]["width"] == pytest.approx(1.2) and not mount[0]["isFill"]
         # follows the cut offset (the flip axis must match the cut layers), not the etch one
         assert centre(mount[0]) == pytest.approx((cx + 9, 108 + 9))
-        # the hole keeps its own size in the normal hole layers
-        assert len(layers[color("hole_cut")]) == 2 and len(layers[color("hole_engrave")]) == 2
+        # and it is no longer in the hole layers: only the other hole is left there
+        for key in ("hole_cut", "hole_engrave"):
+            assert len(layers[color(key)]) == 1
+            assert layers[color(key)][0]["width"] == pytest.approx(0.8)
 
 
-def test_mounting_diameter_and_name(board2):
+def test_mounting_follows_hole_tolerance(board2):
     drl = drill_layer(board2)
-    proj = build_xcs(board2, "front", opts(mounting=[{"layer_id": drl.id, "index": 0}], mounting_diameter=3))
-    assert by_layer(proj)[color("mounting")][0]["width"] == pytest.approx(3.0)
-    assert proj["canvas"][0]["layerData"][color("mounting")]["name"].endswith("3 mm")
+    proj = build_xcs(board2, "front", opts(mounting=[{"layer_id": drl.id, "index": 0}], hole_tolerance=0.2))
+    assert by_layer(proj)[color("mounting")][0]["width"] == pytest.approx(xcs.shrink_size(0.8, 0.2))
+
+
+def test_all_holes_picked_leaves_no_hole_layers(board2):
+    drl = drill_layer(board2)
+    proj = build_xcs(board2, "front", opts(mounting=[{"layer_id": drl.id, "index": i} for i in (0, 1)]))
+    layers = by_layer(proj)
+    assert len(layers[color("mounting")]) == 2
+    assert color("hole_cut") not in layers and color("hole_engrave") not in layers
 
 
 def test_no_mounting_layer_without_picks(board):
@@ -181,7 +192,6 @@ def test_no_mounting_layer_without_picks(board):
 @pytest.mark.parametrize("bad", [
     {"mounting": [{"layer_id": "nope", "index": 0}]},
     {"offsets": {"cut": [11, 0]}},
-    {"mounting_diameter": 0.1},
     {"hole_tolerance": 5},
 ])
 def test_bad_options(board, bad):
